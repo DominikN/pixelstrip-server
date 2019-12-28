@@ -39,12 +39,16 @@ int loadSettings(Settings_t* s)
     if (s->mode == "") {
       preferences.putString("strip_mode", "auto");
       preferences.putString("strip_theme", "none");
+      preferences.putInt("strip_theme_num", -1);
       preferences.putInt("strip_delay", -1);
+  
       fullreset = true;
     }
 
     s->current_theme = preferences.getString("strip_theme");
+    s->themeNum = preferences.getInt("strip_theme_num");
     s->delay = preferences.getInt("strip_delay");
+    
     preferences.end();
 
     if (fullreset == true) {

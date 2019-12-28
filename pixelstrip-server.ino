@@ -98,6 +98,9 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
 
             saveSettings(&stgs_g);
 
+            Serial.printf("Triggering:\r\nmode: %s\r\ntheme: %s [no: %d]\r\ndelay: %d", 
+            stgs_g.mode.c_str(), stgs_g.current_theme.c_str(), stgs_g.themeNum, stgs_g.delay); 
+
             cnt = 0;
           }
           if (jsonDocument["save"]) {
@@ -112,6 +115,11 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             thms_g.framesNo[n] = numframes_l;
             n++;
             thms_g.available = n;
+
+            Serial.printf("available themes:\r\n");
+            for(int i=0; i<n; i++) {
+              Serial.printf("%s (%d x %d)\r\n", thms_g.themeName[i].c_str(), thms_g.framesNo[i], thms_g.pixelsNo[i]);
+            }
 
             saveThemesGlobal(&thms_g);
             
