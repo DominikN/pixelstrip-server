@@ -19,36 +19,11 @@ R"rawText(
     />
     <title>ESP32 + Bootstrap + WebSocket + JSON + Husarnet</title>
 
+<script
+        src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+        crossorigin="anonymous"></script>
     <script type="text/javascript">
-function includeHTML() {
-  var z, i, elmnt, file, xhttp;
-  /*loop through a collection of all HTML elements:*/
-  z = document.getElementsByTagName("*");
-
-  for (i = 0; i < z.length; i++) {
-    elmnt = z[i];
-    /*search for elements with a certain atrribute:*/
-    file = elmnt.getAttribute("w3-include-html");
-    
-    if (file) {
-      /*make an HTTP request using the attribute value as the file name:*/
-      xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4) {
-          if (this.status == 200) {elmnt.innerHTML = this.responseText;}
-          if (this.status == 404) {elmnt.innerHTML = "Page not found.";}
-          /*remove the attribute, and call this function once more:*/
-          elmnt.removeAttribute("w3-include-html");
-          includeHTML();
-        }
-      }      
-      xhttp.open("GET", file, true);
-      xhttp.send();
-      /*exit the function:*/
-      return;
-    }
-  }
-};
 
 
       var ws;
@@ -60,8 +35,8 @@ function includeHTML() {
       function WebSocketBegin() {
         if ("WebSocket" in window) {
           //Let us open a web socket
-  ws = new WebSocket(location.hostname.match(/\.husarnetusers\.com$/) ? "wss://" + location.hostname + "/__port_8001/" : "ws://" + location.hostname + ":8001/");
-    //ws = new WebSocket("ws://esp32strip:8001/");
+  //ws = new WebSocket(location.hostname.match(/\.husarnetusers\.com$/) ? "wss://" + location.hostname + "/__port_8001/" : "ws://" + location.hostname + ":8001/");
+    ws = new WebSocket("ws://esp32strip:8001/");
 
           ws.onopen = function() {
             // Web Socket is connected
@@ -76,6 +51,8 @@ function includeHTML() {
             // websocket is closed.
             alert("Connection is closed...");
           };
+
+    $('#buttons').load("http://esp32strip:8000/content.html");
         } else {
           // The browser doesn't support WebSocket
           alert("WebSocket NOT supported by your Browser!");
@@ -100,7 +77,7 @@ function includeHTML() {
       <div class="container">
         <div class="row">
           <div class="col">
-             <div w3-include-html="content.html"></div> 
+             <div id="buttons"></div> 
           </div>
         </div>
       </div>
