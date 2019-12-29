@@ -6,6 +6,8 @@
 #include <ArduinoJson.h>
 #include <PID_v1.h>
 
+#include <WebServer.h>
+
 #include "NVMmanager.h"
 
 /* ================ CONFIG SECTION START ==================== */
@@ -41,6 +43,13 @@ const char* husarnetJoinCode = "xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/xxxxxxxx
 
 #endif
 /* ================ CONFIG SECTION END   ==================== */
+
+const char* html =
+#include "html.h"
+  ;
+
+
+WebServer server(8000);
 
 //Define Variables we'll be connecting to
 double Setpoint, Input, Output;
@@ -98,8 +107,8 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
 
             saveSettings(&stgs_g);
 
-            Serial.printf("Triggering:\r\nmode: %s\r\ntheme: %s [no: %d]\r\ndelay: %d", 
-            stgs_g.mode.c_str(), stgs_g.current_theme.c_str(), stgs_g.themeNum, stgs_g.delay); 
+            Serial.printf("Triggering:\r\nmode: %s\r\ntheme: %s [no: %d]\r\ndelay: %d",
+                          stgs_g.mode.c_str(), stgs_g.current_theme.c_str(), stgs_g.themeNum, stgs_g.delay);
 
             cnt = 0;
           }
@@ -117,12 +126,12 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             thms_g.available = n;
 
             Serial.printf("available themes:\r\n");
-            for(int i=0; i<n; i++) {
+            for (int i = 0; i < n; i++) {
               Serial.printf("%s (%d x %d)\r\n", thms_g.themeName[i].c_str(), thms_g.framesNo[i], thms_g.pixelsNo[i]);
             }
 
             saveThemesGlobal(&thms_g);
-            
+
             recording = true;
             cnt = 0;
           }
@@ -147,7 +156,7 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
 
     case WStype_BIN: {
         int n = thms_g.available - 1; //index of frame being saved in NVM
-        
+
         for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
           ledstrip.pixel[3 * i + 0] = (uint8_t)(*(payload + (i * 3 + 0)));
           ledstrip.pixel[3 * i + 1] = (uint8_t)(*(payload + (i * 3 + 1)));
@@ -248,7 +257,7 @@ void taskDisplay( void * parameter ) {
 
   while (1) {
     int n = stgs_g.themeNum;
-    
+
     if ((stgs_g.mode == "auto") && (recording == false)) {
       if (pdTRUE == xQueueReceive(queue, (void*)&ls, 100 )) {
         Input = uxQueueMessagesWaiting(queue);
@@ -298,6 +307,11 @@ void taskDisplay( void * parameter ) {
   }
 }
 
+String btns =
+  String(R"rawText(<button type="button" class="btn btn-lg btn-warning btn-block" onmousedown='triggerMode("theme1", 50)' ontouchstart='triggerMode("theme1", 50)'>
+    click
+    </button></div></div></div></section></body></html>)rawText");
+
 void taskWifi( void * parameter ) {
   uint8_t stat = WL_DISCONNECTED;
 
@@ -320,9 +334,25 @@ void taskWifi( void * parameter ) {
   webSocket.begin();
   webSocket.onEvent(onWebSocketEvent);
 
+  server.on("/", HTTP_GET, []() {
+    Serial.printf("\r\nsending main page\r\n");
+    //server.sendHeader("Connection", "close");
+    server.sendHeader("Connection", "keep-alive");
+    server.send(200, "text/html", html);
+  });
+
+  server.on("/content.html", HTTP_GET, []() {
+    Serial.printf("\r\nsending content\r\n");
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/html", btns);
+  });
+
+  server.begin();
+
   while (1) {
     while (WiFi.status() == WL_CONNECTED) {
       webSocket.loop();
+      server.handleClient();
       xSemaphoreTake(sem, ( TickType_t)10);
     }
     Serial.printf("WiFi disconnected, reconnecting\r\n");
