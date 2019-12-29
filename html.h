@@ -29,14 +29,14 @@ R"rawText(
       var ws;
       
       function triggerMode(theme, delay) {
-  ws.send('{"trigger":{"mode":"infinite", "theme":' + theme + ', "delay":' + delay + '}}')
+  ws.send('{"trigger":{"mode":"infinite", "theme":"' + theme + '", "delay":' + delay + '}}')
       }
 
       function WebSocketBegin() {
         if ("WebSocket" in window) {
           //Let us open a web socket
-  //ws = new WebSocket(location.hostname.match(/\.husarnetusers\.com$/) ? "wss://" + location.hostname + "/__port_8001/" : "ws://" + location.hostname + ":8001/");
-    ws = new WebSocket("ws://esp32strip:8001/");
+  ws = new WebSocket(location.hostname.match(/\.husarnetusers\.com$/) ? "wss://" + location.hostname + "/__port_8001/" : "ws://" + location.hostname + ":8001/");
+    //ws = new WebSocket("ws://esp32strip:8001/");
 
           ws.onopen = function() {
             // Web Socket is connected
@@ -52,7 +52,7 @@ R"rawText(
             alert("Connection is closed...");
           };
 
-    $('#buttons').load("http://esp32strip:8000/content.html");
+    $('#buttons').load("/content.html");
         } else {
           // The browser doesn't support WebSocket
           alert("WebSocket NOT supported by your Browser!");
@@ -61,7 +61,7 @@ R"rawText(
     </script>
   </head>
 
-  <body onLoad="javascript:WebSocketBegin(); javascript:includeHTML();">
+  <body onLoad="javascript:WebSocketBegin();">
     <header id="main-header" class="py-2 bg-success text-white">
       <div class="container">
         <div class="row justify-content-md-center">
@@ -86,12 +86,3 @@ R"rawText(
   </body>
 </html>
 )rawText"
-
-//                <button
-//                  type="button"
-//                  class="btn btn-lg btn-warning btn-block"
-//                  onmousedown='triggerMode("theme1", 50)'
-//                  ontouchstart='triggerMode("theme1", 50)'
-//                >
-//                  click
-//                </button>

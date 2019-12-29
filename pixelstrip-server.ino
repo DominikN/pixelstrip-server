@@ -307,11 +307,6 @@ void taskDisplay( void * parameter ) {
   }
 }
 
-String btns =
-  String(R"rawText(<button type="button" class="btn btn-lg btn-warning btn-block" onmousedown='triggerMode("theme1", 50)' ontouchstart='triggerMode("theme1", 50)'>
-    click
-    </button></div></div></div></section></body></html>)rawText");
-
 void taskWifi( void * parameter ) {
   uint8_t stat = WL_DISCONNECTED;
 
@@ -335,14 +330,27 @@ void taskWifi( void * parameter ) {
   webSocket.onEvent(onWebSocketEvent);
 
   server.on("/", HTTP_GET, []() {
-    Serial.printf("\r\nsending main page\r\n");
-    //server.sendHeader("Connection", "close");
-    server.sendHeader("Connection", "keep-alive");
+    server.sendHeader("Connection", "close");
+    //server.sendHeader("Connection", "keep-alive");
     server.send(200, "text/html", html);
   });
 
   server.on("/content.html", HTTP_GET, []() {
-    Serial.printf("\r\nsending content\r\n");
+    String btns;
+
+    for (int i = 0; i < thms_g.available; i++) {
+      btns += String(
+        String("<button type=\"button\" class=\"btn btn-lg btn-block\" onmousedown='triggerMode(\"")
+        + String(thms_g.themeName[i])
+        + String("\", 50)' ontouchstart='triggerMode(\"")
+        + String(thms_g.themeName[i])
+        + String("\", 50)'>")
+        + String(thms_g.themeName[i])
+        + String("</button>")
+      );
+      Serial.printf("Button HTML: [%s]", btns.c_str());
+    }
+
     server.sendHeader("Connection", "close");
     server.send(200, "text/html", btns);
   });
