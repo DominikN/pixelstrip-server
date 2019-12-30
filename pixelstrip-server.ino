@@ -101,12 +101,13 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             if (getConfig) {
               String jsonTx;
 
+              jsonDocTx.clear();
               JsonObject configObj  = jsonDocTx.createNestedObject("config");
               configObj["mode"] = stgs_g.mode;
               configObj["currentTheme"] = stgs_g.current_theme;
-              configObj["themeNum"] = stgs_g.themeNum;
+              configObj["themeNum"] = stgs_g.themeNum;    //todo: redundant
               configObj["delay"] = stgs_g.delay;
-              configObj["available"] = thms_g.available; //todo 
+              configObj["available"] = thms_g.available;  //todo: redundant
 
               JsonArray themesObj = jsonDocTx.createNestedArray("themes");
               JsonObject theme[MAXTHEMENO];
@@ -121,6 +122,7 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
               serializeJson(jsonDocTx, jsonTx);
               Serial.printf("\r\njsonTx: [ %s ]\r\n", jsonTx.c_str());
 
+              webSocket.sendTXT(num, jsonTx);
             }
           }
           if (jsonDoc["trigger"]) {
