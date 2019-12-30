@@ -68,7 +68,8 @@ NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(MAXNUMPIXELS, PIN);
 WebSocketsServer webSocket = WebSocketsServer(WEBSOCKET_PORT);
 WiFiMulti wifiMulti;
 
-StaticJsonDocument<200> jsonDocument;
+StaticJsonDocument<200> jsonDoc;
+StaticJsonDocument<400> jsonDocTx;
 
 bool recording = false;
 
@@ -91,14 +92,41 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
     case WStype_TEXT: {
         Serial.printf("[%s]\r\n", (char*)payload);
 
-        jsonDocument.clear();
-        auto error = deserializeJson(jsonDocument, payload);
+        jsonDoc.clear();
+        auto error = deserializeJson(jsonDoc, payload);
 
         if (!error) {
-          if (jsonDocument["trigger"]) {
-            String mode_l = jsonDocument["trigger"]["mode"];
-            String theme_l = jsonDocument["trigger"]["theme"];
-            int delay_l = jsonDocument["trigger"]["delay"];
+          if (jsonDoc["getConfig"]) {
+            int getConfig = jsonDoc["getConfig"];
+            if (getConfig) {
+              String jsonTx;
+
+              JsonObject configObj  = jsonDocTx.createNestedObject("config");
+              configObj["mode"] = stgs_g.mode;
+              configObj["currentTheme"] = stgs_g.current_theme;
+              configObj["themeNum"] = stgs_g.themeNum;
+              configObj["delay"] = stgs_g.delay;
+              configObj["available"] = thms_g.available; //todo 
+
+              JsonArray themesObj = jsonDocTx.createNestedArray("themes");
+              JsonObject theme[MAXTHEMENO];
+
+              for (int i = 0; i < thms_g.available; i++) {
+                theme[i] = themesObj.createNestedObject();
+                theme[i]["name"] = thms_g.themeName[i];
+                theme[i]["pixelsNo"] = thms_g.pixelsNo[i];
+                theme[i]["framesNo"] = thms_g.framesNo[i];
+              }
+
+              serializeJson(jsonDocTx, jsonTx);
+              Serial.printf("\r\njsonTx: [ %s ]\r\n", jsonTx.c_str());
+
+            }
+          }
+          if (jsonDoc["trigger"]) {
+            String mode_l = jsonDoc["trigger"]["mode"];
+            String theme_l = jsonDoc["trigger"]["theme"];
+            int delay_l = jsonDoc["trigger"]["delay"];
 
             stgs_g.mode = mode_l;
             stgs_g.current_theme = theme_l;
@@ -112,12 +140,12 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
 
             cnt = 0;
           }
-          if (jsonDocument["save"]) {
+          if (jsonDoc["save"]) {
             int n = thms_g.available;
 
-            String theme_l = jsonDocument["save"]["theme"];
-            int  numpixels_l = jsonDocument["save"]["numpixels"];
-            int numframes_l = jsonDocument["save"]["numframes"];
+            String theme_l = jsonDoc["save"]["theme"];
+            int  numpixels_l = jsonDoc["save"]["numpixels"];
+            int numframes_l = jsonDoc["save"]["numframes"];
 
             thms_g.themeName[n] = theme_l;
             thms_g.pixelsNo[n] = numpixels_l;
@@ -135,8 +163,8 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             recording = true;
             cnt = 0;
           }
-          if (jsonDocument["clear"]) {
-            int clr = jsonDocument["clear"];
+          if (jsonDoc["clear"]) {
+            int clr = jsonDoc["clear"];
             if (clr) {
               stgs_g.mode = "auto";
               stgs_g.current_theme = "none";
