@@ -62,11 +62,11 @@ R"rawText(
   </head>
 
   <body onLoad="javascript:WebSocketBegin();">
-    <header id="main-header" class="py-2 bg-success text-white">
+    <header id="main-header" class="py-2 bg-dark">
       <div class="container">
         <div class="row justify-content-md-center">
           <div class="col-md-6 text-center">
-            <h1><i class="fas fa-cog"></i> ESP32 control</h1>
+            <h1><i class="fas fa-cog"></i> Pixel Strip Controller</h1>
           </div>
         </div>
       </div>

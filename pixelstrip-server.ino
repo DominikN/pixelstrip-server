@@ -265,8 +265,11 @@ void taskDisplay( void * parameter ) {
         myPID.SetSampleTime(int(Output));
 
         for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
-          red = ls.pixel[3 * i + 0];
-          green = ls.pixel[3 * i + 1];
+          //          red = ls.pixel[3 * i + 0];
+          //          green = ls.pixel[3 * i + 1];
+          green = ls.pixel[3 * i + 0];
+          red = ls.pixel[3 * i + 1];
+
           blue = ls.pixel[3 * i + 2];
           strip.SetPixelColor(i, RgbColor(red, green, blue));
         }
@@ -280,8 +283,11 @@ void taskDisplay( void * parameter ) {
         loadThemeFrame(&ls, n, cnt);
 
         for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
-          red = ls.pixel[3 * i + 0];
-          green = ls.pixel[3 * i + 1];
+          //          red = ls.pixel[3 * i + 0];
+          //          green = ls.pixel[3 * i + 1];
+          green = ls.pixel[3 * i + 0];
+          red = ls.pixel[3 * i + 1];
+
           blue = ls.pixel[3 * i + 2];
           strip.SetPixelColor(i, RgbColor(red, green, blue));
         }
@@ -340,14 +346,35 @@ void taskWifi( void * parameter ) {
 
     for (int i = 0; i < thms_g.available; i++) {
       btns += String(
-        String("<button type=\"button\" class=\"btn btn-lg btn-block\" onmousedown='triggerMode(\"")
-        + String(thms_g.themeName[i])
-        + String("\", 50)' ontouchstart='triggerMode(\"")
-        + String(thms_g.themeName[i])
-        + String("\", 50)'>")
-        + String(thms_g.themeName[i])
-        + String("</button>")
-      );
+                String("<button type=\"button\" class=\"btn btn-lg btn-block btn-primary\" onmousedown='triggerMode(\"")
+                + String(thms_g.themeName[i])
+                + String("\", 50)' ontouchstart='triggerMode(\"")
+                + String(thms_g.themeName[i])
+                + String("\", 50)'>")
+                + String(thms_g.themeName[i])
+                + String("</button>")
+              );
+      //      if (i == stgs_g.themeNum) {
+      //        btns += String(
+      //                  String("<button type=\"button\" class=\"btn btn-lg btn-block btn-success\" onmousedown='triggerMode(\"")
+      //                  + String(thms_g.themeName[i])
+      //                  + String("\", 50)' ontouchstart='triggerMode(\"")
+      //                  + String(thms_g.themeName[i])
+      //                  + String("\", 50)'>")
+      //                  + String(thms_g.themeName[i])
+      //                  + String("</button>")
+      //                );
+      //      } else {
+      //        btns += String(
+      //                  String("<button type=\"button\" class=\"btn btn-lg btn-block btn-secondary\" onmousedown='triggerMode(\"")
+      //                  + String(thms_g.themeName[i])
+      //                  + String("\", 50)' ontouchstart='triggerMode(\"")
+      //                  + String(thms_g.themeName[i])
+      //                  + String("\", 50)'>")
+      //                  + String(thms_g.themeName[i])
+      //                  + String("</button>")
+      //                );
+      //      }
       Serial.printf("Button HTML: [%s]", btns.c_str());
     }
 

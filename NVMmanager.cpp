@@ -19,6 +19,7 @@ int saveSettings(Settings_t* s)
     preferences.begin(NS_SETTINGS, false);
     preferences.putString("strip_mode", s->mode.c_str());
     preferences.putString("strip_theme", s->current_theme.c_str());
+    preferences.putInt("strip_theme_num", s->themeNum);
     preferences.putInt("strip_delay", s->delay);
     preferences.end();
     xSemaphoreGive(semNVM);
@@ -50,6 +51,8 @@ int loadSettings(Settings_t* s)
     s->delay = preferences.getInt("strip_delay");
     
     preferences.end();
+
+    Serial.printf("NVM load settings:\r\nmode: %s\r\ntheme: %s (%d)\r\ndelay: %d\r\n", s->mode.c_str(), s->current_theme.c_str(), s->themeNum, s->delay); 
 
     if (fullreset == true) {
       resetThemes();
