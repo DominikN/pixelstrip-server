@@ -54,7 +54,8 @@
 	    console.log('mode: ' + mode + '\r\ncurrentTheme: ' + currentTheme + '\r\ndelay: ' + delay + 'ms');
             var i;
             for(i=0;i<available;i++) {
-	    	console.log('theme[' + i +']:' + jsonObject.themes[i].name );
+	    	console.log('theme[' + i +']: ' + jsonObject.themes[i].name );
+		$( "#btns" ).append( "<button type=\"button\" class=\"btn btn-lg btn-block " + ((themeNum==i)?"btn-success":"btn-primary") + "\" onmousedown=\'triggerMode(\"" + jsonObject.themes[i].name + "\",50)\' ontouchstart=\'triggerMode(\"jsonObject.themes[i].name\",50)\'>" + jsonObject.themes[i].name + "</button>");
             }    
           };
 
@@ -63,7 +64,6 @@
             alert("Connection is closed...");
           };
 
-    $('#buttons').load("/content.html");
         } else {
           // The browser doesn't support WebSocket
           alert("WebSocket NOT supported by your Browser!");
@@ -87,8 +87,8 @@
 
       <div class="container">
         <div class="row">
-          <div class="col">
-             <div id="buttons"></div> 
+          <div class="col" id="btns">
+             <!--<div id="buttons"></div> -->
           </div>
         </div>
       </div>
