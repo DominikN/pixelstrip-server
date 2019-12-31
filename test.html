@@ -51,7 +51,11 @@
 	    var delay = 	jsonObject.config.delay;
 	    var available = 	jsonObject.config.available;
 
-	    console.log('mode: ' + mode + '\r\ncurrentTheme: ' + currentTheme + '\r\n');    
+	    console.log('mode: ' + mode + '\r\ncurrentTheme: ' + currentTheme + '\r\ndelay: ' + delay + 'ms');
+            var i;
+            for(i=0;i<available;i++) {
+	    	console.log('theme[' + i +']:' + jsonObject.themes[i].name );
+            }    
           };
 
           ws.onclose = function() {
