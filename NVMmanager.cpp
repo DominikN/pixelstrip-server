@@ -21,6 +21,11 @@ int saveSettings(Settings_t* s)
     preferences.putString("strip_theme", s->current_theme.c_str());
     preferences.putInt("strip_theme_num", s->themeNum);
     preferences.putInt("strip_delay", s->delay);
+    preferences.putInt("time_start_h", s->timeStartH);
+    preferences.putInt("time_start_m", s->timeStartM);
+    preferences.putInt("time_stop_h", s->timeStopH);
+    preferences.putInt("time_stop_m", s->timeStopM);
+    
     preferences.end();
     xSemaphoreGive(semNVM);
   } else {
@@ -42,6 +47,11 @@ int loadSettings(Settings_t* s)
       preferences.putString("strip_theme", "none");
       preferences.putInt("strip_theme_num", -1);
       preferences.putInt("strip_delay", -1);
+
+      preferences.putInt("time_start_h", 0);
+      preferences.putInt("time_start_m", 0);
+      preferences.putInt("time_stop_h", 23);
+      preferences.putInt("time_stop_m", 59);
   
       fullreset = true;
     }
@@ -49,10 +59,16 @@ int loadSettings(Settings_t* s)
     s->current_theme = preferences.getString("strip_theme");
     s->themeNum = preferences.getInt("strip_theme_num");
     s->delay = preferences.getInt("strip_delay");
+
+    s->timeStartH = preferences.getInt("time_start_h");
+    s->timeStartM = preferences.getInt("time_start_m");
+    s->timeStopH = preferences.getInt("time_stop_h");
+    s->timeStopM = preferences.getInt("time_stop_m");
     
     preferences.end();
   
-    Serial.printf("NVM load settings:\r\nmode: %s\r\ntheme: %s (%d)\r\ndelay: %d\r\n", s->mode.c_str(), s->current_theme.c_str(), s->themeNum, s->delay); 
+    Serial.printf("NVM load settings:\r\nmode: %s\r\ntheme: %s (%d)\r\ndelay: %d\r\n[%d:%d] -> [%d:%d]\r\n", 
+    s->mode.c_str(), s->current_theme.c_str(), s->themeNum, s->delay, s->timeStartH, s->timeStartM, s->timeStopH, s->timeStopM); 
 
     if (fullreset == true) {
       resetThemes();

@@ -12,6 +12,10 @@ typedef struct {
   String current_theme;
   int themeNum;
   int delay;
+  int timeStartH;
+  int timeStartM;
+  int timeStopH;
+  int timeStopM;
 } Settings_t;
 
 typedef struct {

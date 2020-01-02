@@ -10,6 +10,38 @@
 
 #include "NVMmanager.h"
 
+#include "time.h"
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
+
+void printLocalTime()
+{
+  struct tm timeinfo;
+  time_t rawtime;
+
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  rawtime = mktime(&timeinfo);
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S"); //see http://www.cplusplus.com/reference/ctime/strftime/
+  Serial.printf("raw time: %d\r\n", rawtime);
+}
+
+bool getTime(int& h, int& m) {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return 0;
+  } else {
+    h = timeinfo.tm_hour;
+    m = timeinfo.tm_min;
+    return 1;
+  }
+}
+
 /* ================ CONFIG SECTION START ==================== */
 #define PIN           12   // Pin connected to PixelStrip
 
@@ -69,10 +101,9 @@ WebSocketsServer webSocket = WebSocketsServer(WEBSOCKET_PORT);
 WiFiMulti wifiMulti;
 
 StaticJsonDocument<200> jsonDoc;
-StaticJsonDocument<400> jsonDocTx;
+StaticJsonDocument<800> jsonDocTx;
 
 bool recording = false;
-
 
 void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
   LedStripState ledstrip;
@@ -96,6 +127,14 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
         auto error = deserializeJson(jsonDoc, payload);
 
         if (!error) {
+          if (jsonDoc["validTimeSet"]) {
+            stgs_g.timeStartH = jsonDoc["validTimeSet"]["startH"];
+            stgs_g.timeStartM = jsonDoc["validTimeSet"]["startM"];
+            stgs_g.timeStopH = jsonDoc["validTimeSet"]["stopH"];
+            stgs_g.timeStopM = jsonDoc["validTimeSet"]["stopM"];
+
+            saveSettings(&stgs_g);
+          }
           if (jsonDoc["getConfig"]) {
             int getConfig = jsonDoc["getConfig"];
             if (getConfig) {
@@ -108,6 +147,11 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
               configObj["themeNum"] = stgs_g.themeNum;    //todo: redundant
               configObj["delay"] = stgs_g.delay;
               configObj["available"] = thms_g.available;  //todo: redundant
+
+              configObj["startH"] = stgs_g.timeStartH;
+              configObj["startM"] = stgs_g.timeStartM;
+              configObj["stopH"] = stgs_g.timeStopH;
+              configObj["stopM"] = stgs_g.timeStopM;
 
               JsonArray themesObj = jsonDocTx.createNestedArray("themes");
               JsonObject theme[MAXTHEMENO];
@@ -230,6 +274,10 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
 void setup() {
   Serial.begin(230400);
 
+  //init and get the time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+
   Serial.printf("\r\nMAXBUFSIZE = %d\r\nMAXNUMPIXELS = %d\r\n", MAXBUFSIZE, MAXNUMPIXELS);
 
   /* Init queue for pixel strip frames (for "auto" mode only) */
@@ -310,34 +358,51 @@ void taskDisplay( void * parameter ) {
       }
     } else {
       if ((recording == false)) {
-        loadThemeFrame(&ls, n, cnt);
+        int h, m;
+        int tStart = 60*stgs_g.timeStartH + stgs_g.timeStartM;
+        int tStop = 60*stgs_g.timeStopH + stgs_g.timeStopM;
 
-        for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
-          //          red = ls.pixel[3 * i + 0];
-          //          green = ls.pixel[3 * i + 1];
-          green = ls.pixel[3 * i + 0];
-          red = ls.pixel[3 * i + 1];
+        bool timeValid = getTime(h, m);
+        int tNow = 60*h + m;
+       // Serial.printf("%d ? [%d : %d], %d\r\n",tNow, tStart, tStop, timeValid);
+        if (
+          (timeValid == 0)
+          || ((tStart <= tStop) && ((tNow >= tStart) && (tNow <= tStop)))
+          || ((tStart > tStop) && ((tNow >= tStart) || (tNow <= tStop)))
+        ) {
+          loadThemeFrame(&ls, n, cnt);
+          //printLocalTime();
 
-          blue = ls.pixel[3 * i + 2];
-          strip.SetPixelColor(i, RgbColor(red, green, blue));
-        }
+          for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
+            //          red = ls.pixel[3 * i + 0];
+            //          green = ls.pixel[3 * i + 1];
+            green = ls.pixel[3 * i + 0];
+            red = ls.pixel[3 * i + 1];
 
-        strip.Show();
-
-        cnt++;
-        if (cnt >= thms_g.framesNo[n]) {
-          if (stgs_g.mode == "infinite") {
-            cnt = 0;
+            blue = ls.pixel[3 * i + 2];
+            strip.SetPixelColor(i, RgbColor(red, green, blue));
           }
-          if (stgs_g.mode == "singleshot") {
-            stgs_g.mode = "auto";
-            cnt = 0;
-          }
-        }
 
-        delay(stgs_g.delay);
-      } else {
-        delay(10);
+          strip.Show();
+
+          cnt++;
+          if (cnt >= thms_g.framesNo[n]) {
+            if (stgs_g.mode == "infinite") {
+              cnt = 0;
+            }
+            if (stgs_g.mode == "singleshot") {
+              stgs_g.mode = "auto";
+              cnt = 0;
+            }
+          }
+
+          delay(stgs_g.delay);
+        } else {
+          for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
+            strip.SetPixelColor(i, RgbColor(0, 0, 0));
+          }
+          delay(100);
+        }
       }
     }
   }
