@@ -1,6 +1,6 @@
 #define MAXTHEMENO    10
 #define MAXNUMPIXELS  400   // How many NeoPixels are attached to the Arduino?
-#define MAXBUFSIZE    2   // buffer size for storing LED strip state (each NUMPIXELS * 3 size)
+#define MAXBUFSIZE    1   // buffer size for storing LED strip state (each NUMPIXELS * 3 size)
 
 
 typedef struct {

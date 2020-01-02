@@ -16,7 +16,13 @@
       integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB"
       crossorigin="anonymous"
     />
-    <title>ESP32 + Bootstrap + WebSocket + JSON + Husarnet</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/css/bootstrap4-toggle.min.css"
+      rel="stylesheet"
+    />
+
+    <title>Pixel Strip Controller</title>
 
     <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
     <script type="text/javascript">
@@ -46,11 +52,18 @@
         );
       }
 
-      function sendValidTime()
-      {
+      function sendValidTime() {
         ws.send(
-          '{"validTimeSet": {"startH":' + startH + ', "startM":' + startM + ', "stopH":' + stopH + ', "stopM":'+ stopM + '}}'
-        );    
+          '{"validTimeSet": {"startH":' +
+            startH +
+            ', "startM":' +
+            startM +
+            ', "stopH":' +
+            stopH +
+            ', "stopM":' +
+            stopM +
+            "}}"
+        );
       }
 
       const interval = setInterval(function() {
@@ -129,35 +142,41 @@
             var timeStopH = document.getElementById("timeStopH");
             var timeStopM = document.getElementById("timeStopM");
 
-            for(i = 0; i<24; i++) {
+            for (i = 0; i < 24; i++) {
               var option = document.createElement("option");
               option.text = i;
               option.value = i;
               timeStartH.add(option);
-            };
-            for(i = 0; i<60; i++) {
+            }
+            for (i = 0; i < 60; i++) {
               var option = document.createElement("option");
               option.text = i;
               option.value = i;
               timeStartM.add(option);
-            };
-            for(i = 0; i<24; i++) {
+            }
+            for (i = 0; i < 24; i++) {
               var option = document.createElement("option");
               option.text = i;
               option.value = i;
               timeStopH.add(option);
-            };
-            for(i = 0; i<60; i++) {
+            }
+            for (i = 0; i < 60; i++) {
               var option = document.createElement("option");
               option.text = i;
               option.value = i;
               timeStopM.add(option);
-            };
-            $('#timeStartH option[value=' + startH +']').prop('selected', true);
-            $('#timeStartM option[value=' + startM +']').prop('selected', true);
+            }
+            $("#timeStartH option[value=" + startH + "]").prop(
+              "selected",
+              true
+            );
+            $("#timeStartM option[value=" + startM + "]").prop(
+              "selected",
+              true
+            );
 
-            $('#timeStopH option[value=' + stopH +']').prop('selected', true);
-            $('#timeStopM option[value=' + stopM +']').prop('selected', true);
+            $("#timeStopH option[value=" + stopH + "]").prop("selected", true);
+            $("#timeStopM option[value=" + stopM + "]").prop("selected", true);
           };
 
           ws.onclose = function() {
@@ -253,6 +272,14 @@
                 <select class="form-control" id="timeStopH"> </select>
                 <select class="form-control" id="timeStopM"> </select>
               </div>
+<!-- 
+              <input
+                id="oncheckbox"
+                type="checkbox"
+                checked
+                data-toggle="toggle"
+                data-size="lg"
+              /> -->
 
               <label class="mt-5" id="pingcnt">0</label>
             </form>
@@ -312,6 +339,15 @@
         console.log("stop time M\r\n" + stopM);
         sendValidTime();
       });
+
+      // $("#oncheckbox").change(function() {
+      //   if ($("#oncheckbox").is(":checked")) {
+      //     triggerMode(currentTheme, delay);
+      //   } else {
+      //     triggerMode("auto", -1);
+      //   }
+      // });
     </script>
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.6.1/js/bootstrap4-toggle.min.js"></script>
   </body>
 </html>

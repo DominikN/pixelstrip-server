@@ -17,7 +17,7 @@ R"rawText(
       integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB"
       crossorigin="anonymous"
     />
-    <title>ESP32 + Bootstrap + WebSocket + JSON + Husarnet</title>
+    <title>Pixel Strip Controller</title>
 
     <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
     <script type="text/javascript">
@@ -30,6 +30,11 @@ R"rawText(
       var delay;
       var available;
 
+      var startH = 0;
+      var startM = 0;
+      var stopH = 23;
+      var stopM = 59;
+
       var cnt = 0;
 
       function triggerMode(theme, delay) {
@@ -38,6 +43,20 @@ R"rawText(
             theme +
             '", "delay":' +
             delay +
+            "}}"
+        );
+      }
+
+      function sendValidTime() {
+        ws.send(
+          '{"validTimeSet": {"startH":' +
+            startH +
+            ', "startM":' +
+            startM +
+            ', "stopH":' +
+            stopH +
+            ', "stopM":' +
+            stopM +
             "}}"
         );
       }
@@ -55,12 +74,12 @@ R"rawText(
       function WebSocketBegin() {
         if ("WebSocket" in window) {
           //Let us open a web socket
-          ws = new WebSocket(
+          /*ws = new WebSocket(
             location.hostname.match(/\.husarnetusers\.com$/)
               ? "wss://" + location.hostname + "/__port_8001/"
               : "ws://" + location.hostname + ":8001/"
-          );
-          //ws = new WebSocket("ws://esp32strip:8001/");
+          );*/
+          ws = new WebSocket("ws://esp32strip:8001/");
 
           ws.onopen = function() {
             // Web Socket is connected
@@ -77,6 +96,11 @@ R"rawText(
             delay = jsonObject.config.delay;
             available = jsonObject.config.available;
 
+            startH = jsonObject.config.startH;
+            startM = jsonObject.config.startM;
+            stopH = jsonObject.config.stopH;
+            stopM = jsonObject.config.stopM;
+
             console.log(
               "mode: " +
                 mode +
@@ -88,10 +112,14 @@ R"rawText(
                 "\r\navailable: " +
                 available
             );
+            var slider = document.getElementById("myRange");
+            var output = document.getElementById("demo");
+            slider.value = delay;
+            output.innerHTML = delay;
+
             var i;
             for (i = 0; i < available; i++) {
               console.log("theme[" + i + "]: " + jsonObject.themes[i].name);
-              //$( "#btns" ).append( "<button type=\"button\" class=\"btn btn-lg btn-block " + ((themeNum==i)?"btn-success":"btn-primary") + "\" onmousedown=\'triggerMode(\"" + jsonObject.themes[i].name + "\",50)\' ontouchstart=\'triggerMode(\"jsonObject.themes[i].name\",50)\'>" + jsonObject.themes[i].name + "</button>");
               $("#thms").append(
                 "<option value='" +
                   i +
@@ -100,13 +128,53 @@ R"rawText(
                   jsonObject.themes[i].name +
                   "</option>"
               );
-              //+ ((themeNum==i)?" selected>":">")
             }
+
+            var timeStartH = document.getElementById("timeStartH");
+            var timeStartM = document.getElementById("timeStartM");
+            var timeStopH = document.getElementById("timeStopH");
+            var timeStopM = document.getElementById("timeStopM");
+
+            for (i = 0; i < 24; i++) {
+              var option = document.createElement("option");
+              option.text = i;
+              option.value = i;
+              timeStartH.add(option);
+            }
+            for (i = 0; i < 60; i++) {
+              var option = document.createElement("option");
+              option.text = i;
+              option.value = i;
+              timeStartM.add(option);
+            }
+            for (i = 0; i < 24; i++) {
+              var option = document.createElement("option");
+              option.text = i;
+              option.value = i;
+              timeStopH.add(option);
+            }
+            for (i = 0; i < 60; i++) {
+              var option = document.createElement("option");
+              option.text = i;
+              option.value = i;
+              timeStopM.add(option);
+            }
+            $("#timeStartH option[value=" + startH + "]").prop(
+              "selected",
+              true
+            );
+            $("#timeStartM option[value=" + startM + "]").prop(
+              "selected",
+              true
+            );
+
+            $("#timeStopH option[value=" + stopH + "]").prop("selected", true);
+            $("#timeStopM option[value=" + stopM + "]").prop("selected", true);
           };
 
           ws.onclose = function() {
             // websocket is closed.
-            alert("Connection is closed...");
+            alert("WebSocket is closed...");
           };
         } else {
           // The browser doesn't support WebSocket
@@ -139,14 +207,14 @@ R"rawText(
         appearance: none;
         width: 25px;
         height: 25px;
-        background: #4caf50;
+        background: #161616;
         cursor: pointer;
       }
 
       .slider::-moz-range-thumb {
         width: 25px;
         height: 25px;
-        background: #4caf50;
+        background: #161616;
         cursor: pointer;
       }
     </style>
@@ -174,8 +242,7 @@ R"rawText(
                 <select class="form-control" id="thms"> </select>
               </div>
 
-              <label class="mt-5">Set delay (in ms)</label>
-
+              <label class="mt-5">Set delay</label>
               <div class="slidecontainer">
                 <input
                   type="range"
@@ -185,7 +252,18 @@ R"rawText(
                   class="slider"
                   id="myRange"
                 />
-                <p>Value: <span id="demo"></span></p>
+                <p>Current delay: <span id="demo"></span> [ms]</p>
+              </div>
+
+              <div class="form-inline mt-5">
+                <label for="formctrl-time">Select start time</label>
+                <select class="form-control" id="timeStartH"> </select>
+                <select class="form-control" id="timeStartM"> </select>
+              </div>
+              <div class="form-inline mt-5">
+                <label for="formctrl-time">Select stop time</label>
+                <select class="form-control" id="timeStopH"> </select>
+                <select class="form-control" id="timeStopM"> </select>
               </div>
               <label class="mt-5" id="pingcnt">0</label>
             </form>
@@ -198,6 +276,10 @@ R"rawText(
       var slider = document.getElementById("myRange");
       var output = document.getElementById("demo");
       output.innerHTML = slider.value;
+
+      slider.oninput = function() {
+        output.innerHTML = this.value;
+      };
 
       slider.ontouchend = function() {
         output.innerHTML = this.value;
@@ -217,6 +299,31 @@ R"rawText(
         currentTheme = $("#thms option:selected").text();
         triggerMode(currentTheme, delay);
       });
+
+      $("#timeStartH").change(function() {
+        startH = $("#timeStartH option:selected").val();
+        console.log("start time H\r\n" + startH);
+        sendValidTime();
+      });
+
+      $("#timeStartM").change(function() {
+        startM = $("#timeStartM option:selected").val();
+        console.log("start time M\r\n" + startM);
+        sendValidTime();
+      });
+
+      $("#timeStopH").change(function() {
+        stopH = $("#timeStopH option:selected").val();
+        console.log("stop time H\r\n" + stopH);
+        sendValidTime();
+      });
+
+      $("#timeStopM").change(function() {
+        stopM = $("#timeStopM option:selected").val();
+        console.log("stop time M\r\n" + stopM);
+        sendValidTime();
+      });
+
     </script>
   </body>
 </html>
