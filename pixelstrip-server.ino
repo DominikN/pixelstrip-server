@@ -261,7 +261,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     taskWifi,          /* Task function. */
     "taskWifi",        /* String with name of task. */
-    10000,            /* Stack size in bytes. */
+    4096,            /* Stack size in bytes. */
     NULL,             /* Parameter passed as input of the task */
     4,                /* Priority of the task. */
     NULL,             /* Task handle. */
@@ -270,7 +270,7 @@ void setup() {
   xTaskCreate(
     taskDisplay,          /* Task function. */
     "taskDisplay",        /* String with name of task. */
-    10000,            /* Stack size in bytes. */
+    4096,            /* Stack size in bytes. */
     NULL,             /* Parameter passed as input of the task */
     4,                /* Priority of the task. */
     NULL);             /* Task handle. */
@@ -371,47 +371,6 @@ void taskWifi( void * parameter ) {
     server.send(200, "text/html", html);
   });
 
-  server.on("/content.html", HTTP_GET, []() {
-    String btns;
-
-    for (int i = 0; i < thms_g.available; i++) {
-      btns += String(
-                String("<button type=\"button\" class=\"btn btn-lg btn-block btn-primary\" onmousedown='triggerMode(\"")
-                + String(thms_g.themeName[i])
-                + String("\", 50)' ontouchstart='triggerMode(\"")
-                + String(thms_g.themeName[i])
-                + String("\", 50)'>")
-                + String(thms_g.themeName[i])
-                + String("</button>")
-              );
-      //      if (i == stgs_g.themeNum) {
-      //        btns += String(
-      //                  String("<button type=\"button\" class=\"btn btn-lg btn-block btn-success\" onmousedown='triggerMode(\"")
-      //                  + String(thms_g.themeName[i])
-      //                  + String("\", 50)' ontouchstart='triggerMode(\"")
-      //                  + String(thms_g.themeName[i])
-      //                  + String("\", 50)'>")
-      //                  + String(thms_g.themeName[i])
-      //                  + String("</button>")
-      //                );
-      //      } else {
-      //        btns += String(
-      //                  String("<button type=\"button\" class=\"btn btn-lg btn-block btn-secondary\" onmousedown='triggerMode(\"")
-      //                  + String(thms_g.themeName[i])
-      //                  + String("\", 50)' ontouchstart='triggerMode(\"")
-      //                  + String(thms_g.themeName[i])
-      //                  + String("\", 50)'>")
-      //                  + String(thms_g.themeName[i])
-      //                  + String("</button>")
-      //                );
-      //      }
-      Serial.printf("Button HTML: [%s]", btns.c_str());
-    }
-
-    server.sendHeader("Connection", "close");
-    server.send(200, "text/html", btns);
-  });
-
   server.begin();
 
   while (1) {
@@ -423,6 +382,7 @@ void taskWifi( void * parameter ) {
     Serial.printf("WiFi disconnected, reconnecting\r\n");
     stat = wifiMulti.run();
     Serial.printf("WiFi status: %d\r\n", (int)stat);
+    delay(500);
   }
 }
 

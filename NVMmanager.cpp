@@ -51,7 +51,7 @@ int loadSettings(Settings_t* s)
     s->delay = preferences.getInt("strip_delay");
     
     preferences.end();
-
+  
     Serial.printf("NVM load settings:\r\nmode: %s\r\ntheme: %s (%d)\r\ndelay: %d\r\n", s->mode.c_str(), s->current_theme.c_str(), s->themeNum, s->delay); 
 
     if (fullreset == true) {
@@ -136,8 +136,8 @@ int loadThemeFrame(LedStripState* ls, int themeNo, int frameNo)
     preferences.end();
 
     xSemaphoreGive(semNVM);
-
-    Serial.printf("read: %s\r\n", key.c_str());
+    
+    Serial.printf("read: %s | RAM: %d\r\n", key.c_str(), esp_get_free_heap_size());
   } else {
     Serial.printf("NVM error WS\r\n");
   }

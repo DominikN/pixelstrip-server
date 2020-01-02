@@ -29,6 +29,8 @@
       var delay;
       var available;
 
+      var cnt = 0;
+
       function triggerMode(theme, delay) {
         ws.send(
           '{"trigger":{"mode":"infinite", "theme":"' +
@@ -39,15 +41,30 @@
         );
       }
 
+      const interval = setInterval(function() {
+        if (ws.readyState == WebSocket.OPEN) {
+          cnt = cnt + 1;
+          ws.send('{"ping":' + cnt + "}");
+
+          var pingcounter = document.getElementById("pingcnt");
+          pingcounter.innerHTML = cnt;
+        }
+      }, 10000);
+
       function WebSocketBegin() {
         if ("WebSocket" in window) {
           //Let us open a web socket
-          //ws = new WebSocket(location.hostname.match(/\.husarnetusers\.com$/) ? "wss://" + location.hostname + "/__port_8001/" : "ws://" + location.hostname + ":8001/");
+          /*ws = new WebSocket(
+            location.hostname.match(/\.husarnetusers\.com$/)
+              ? "wss://" + location.hostname + "/__port_8001/"
+              : "ws://" + location.hostname + ":8001/"
+          );*/
           ws = new WebSocket("ws://esp32strip:8001/");
 
           ws.onopen = function() {
             // Web Socket is connected
             //alert("Connection is opened...");
+
             ws.send('{"getConfig":1}');
           };
 
@@ -70,6 +87,11 @@
                 "\r\navailable: " +
                 available
             );
+            var slider = document.getElementById("myRange");
+            var output = document.getElementById("demo");
+            slider.value = delay;
+            output.innerHTML = delay;
+
             var i;
             for (i = 0; i < available; i++) {
               console.log("theme[" + i + "]: " + jsonObject.themes[i].name);
@@ -156,19 +178,20 @@
                 <select class="form-control" id="thms"> </select>
               </div>
 
-              <label>Set delay</label>
+              <label class="mt-5">Set delay</label>
 
               <div class="slidecontainer">
                 <input
                   type="range"
                   min="20"
-                  max="200"
+                  max="500"
                   value="50"
                   class="slider"
                   id="myRange"
                 />
-                <p>Value: <span id="demo"></span></p>
+                <p>Current delay: <span id="demo"></span> [ms]</p>
               </div>
+              <label class="mt-5" id="pingcnt">0</label>
             </form>
           </div>
         </div>
@@ -180,10 +203,15 @@
       var output = document.getElementById("demo");
       output.innerHTML = slider.value;
 
+      slider.ontouchend = function() {
+        output.innerHTML = this.value;
+        delay = this.value;
+        triggerMode(currentTheme, delay);
+      };
       slider.onmouseup = function() {
-		output.innerHTML = this.value;
-		delay = this.value;
-		triggerMode(currentTheme, delay);
+        output.innerHTML = this.value;
+        delay = this.value;
+        triggerMode(currentTheme, delay);
       };
     </script>
 
