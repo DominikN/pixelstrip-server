@@ -79,6 +79,10 @@ const char* husarnetJoinCode = "xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/xxxxxxxx
 const char* html =
 #include "html.h"
   ;
+const char* pixelstrip_js =
+#include "pixelstrip_js.h"
+  ;
+
 
 
 WebServer server(8000);
@@ -359,12 +363,12 @@ void taskDisplay( void * parameter ) {
     } else {
       if ((recording == false)) {
         int h, m;
-        int tStart = 60*stgs_g.timeStartH + stgs_g.timeStartM;
-        int tStop = 60*stgs_g.timeStopH + stgs_g.timeStopM;
+        int tStart = 60 * stgs_g.timeStartH + stgs_g.timeStartM;
+        int tStop = 60 * stgs_g.timeStopH + stgs_g.timeStopM;
 
         bool timeValid = getTime(h, m);
-        int tNow = 60*h + m;
-       // Serial.printf("%d ? [%d : %d], %d\r\n",tNow, tStart, tStop, timeValid);
+        int tNow = 60 * h + m;
+        // Serial.printf("%d ? [%d : %d], %d\r\n",tNow, tStart, tStop, timeValid);
         if (
           (timeValid == 0)
           || ((tStart <= tStop) && ((tNow >= tStart) && (tNow <= tStop)))
@@ -401,6 +405,7 @@ void taskDisplay( void * parameter ) {
           for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
             strip.SetPixelColor(i, RgbColor(0, 0, 0));
           }
+          strip.Show();
           delay(100);
         }
       }
@@ -432,8 +437,12 @@ void taskWifi( void * parameter ) {
 
   server.on("/", HTTP_GET, []() {
     server.sendHeader("Connection", "close");
-    //server.sendHeader("Connection", "keep-alive");
     server.send(200, "text/html", html);
+  });
+
+  server.on("/pixelstrip.js", HTTP_GET, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "application/javascript", pixelstrip_js);
   });
 
   server.begin();

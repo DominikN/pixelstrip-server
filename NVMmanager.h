@@ -1,5 +1,5 @@
 #define MAXTHEMENO    10
-#define MAXNUMPIXELS  400   // How many NeoPixels are attached to the Arduino?
+#define MAXNUMPIXELS  150   // How many NeoPixels are attached to the Arduino?
 #define MAXBUFSIZE    1   // buffer size for storing LED strip state (each NUMPIXELS * 3 size)
 
 
