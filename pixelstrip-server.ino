@@ -208,7 +208,7 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
               Serial.printf("%s (%d x %d)\r\n", thms_g.themeName[i].c_str(), thms_g.framesNo[i], thms_g.pixelsNo[i]);
             }
 
-            saveThemesGlobal(&thms_g);
+            saveThemesGlobal(&thms_g);  //todo save in memory only if binary data is saved successfully
 
             recording = true;
             cnt = 0;
@@ -319,14 +319,18 @@ void setup() {
     NULL,             /* Task handle. */
     1);               /* Core where the task should run (z 0 działało) */
 
-  xTaskCreate(
+  xTaskCreatePinnedToCore(
     taskDisplay,          /* Task function. */
     "taskDisplay",        /* String with name of task. */
     4096,            /* Stack size in bytes. */
     NULL,             /* Parameter passed as input of the task */
     4,                /* Priority of the task. */
-    NULL);             /* Task handle. */
+    NULL,            /* Task handle. */
+    1);               /* Core where the task should run (z 0 działało) */
 }
+
+int tNow = 0;
+bool timeValid = false;
 
 void taskDisplay( void * parameter ) {
   LedStripState ls;
@@ -362,12 +366,9 @@ void taskDisplay( void * parameter ) {
       }
     } else {
       if ((recording == false)) {
-        int h, m;
         int tStart = 60 * stgs_g.timeStartH + stgs_g.timeStartM;
         int tStop = 60 * stgs_g.timeStopH + stgs_g.timeStopM;
 
-        bool timeValid = getTime(h, m);
-        int tNow = 60 * h + m;
         // Serial.printf("%d ? [%d : %d], %d\r\n",tNow, tStart, tStop, timeValid);
         if (
           (timeValid == 0)
@@ -408,6 +409,8 @@ void taskDisplay( void * parameter ) {
           strip.Show();
           delay(100);
         }
+      } else {
+        delay(100);
       }
     }
   }
@@ -415,6 +418,7 @@ void taskDisplay( void * parameter ) {
 
 void taskWifi( void * parameter ) {
   uint8_t stat = WL_DISCONNECTED;
+  int h, m;
 
   /* Add Wi-Fi network credentials */
   for (int i = 0; i < NUM_NETWORKS; i++) {
@@ -438,11 +442,13 @@ void taskWifi( void * parameter ) {
   server.on("/", HTTP_GET, []() {
     server.sendHeader("Connection", "close");
     server.send(200, "text/html", html);
+    xSemaphoreGive( sem );
   });
 
   server.on("/pixelstrip.js", HTTP_GET, []() {
     server.sendHeader("Connection", "close");
     server.send(200, "application/javascript", pixelstrip_js);
+    xSemaphoreGive( sem );
   });
 
   server.begin();
@@ -451,6 +457,9 @@ void taskWifi( void * parameter ) {
     while (WiFi.status() == WL_CONNECTED) {
       webSocket.loop();
       server.handleClient();
+
+      timeValid = getTime(h, m);
+      tNow = 60 * h + m;
       xSemaphoreTake(sem, ( TickType_t)10);
     }
     Serial.printf("WiFi disconnected, reconnecting\r\n");
