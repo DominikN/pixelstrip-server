@@ -14,12 +14,13 @@ import matplotlib.pyplot as plt
 
 from array import *
 
+
 NUMPIXELS = 150
 
 def cmap_tab(theme):
 	cmap = plt.get_cmap(theme)
 	
-	colors_i = np.linspace(0, 1., NUMPIXELS/2)
+	colors_i = np.linspace(0, 1., (args.numpixel)/2)
 	
 	# convert float to uint8
 	tab = np.uint8(255 * cmap(colors_i))
@@ -44,11 +45,11 @@ async def mainfunc():
 	uri = "ws://" + args.hostname + ":8001"
 	print("connecting: " + uri)
 	async with websockets.connect(uri) as websocket:
-		print("clear NVM")
-		msg = json.dumps({"clear": 1})
-		print(msg)
-		await websocket.send(msg)
-		await asyncio.sleep(0.1)
+		#print("clear NVM")
+		#msg = json.dumps({"clear": 1})
+		#print(msg)
+		#await websocket.send(msg)
+		#await asyncio.sleep(0.5)
 		
 		for i in range(len(args.themes)):
 			msg = json.dumps({"save":{"theme":args.themes[i], "numpixels":args.numpixel, "numframes":args.numpixel}})

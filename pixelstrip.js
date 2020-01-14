@@ -56,7 +56,7 @@ function WebSocketBegin() {
               ? "wss://" + location.hostname + "/__port_8001/"
               : "ws://" + location.hostname + ":8001/"
           );*/
-    ws = new WebSocket("ws://esp32strip:8001/");
+    ws = new WebSocket("ws://esp32big:8001/");
 
     ws.onopen = function() {
       // Web Socket is connected
@@ -67,87 +67,100 @@ function WebSocketBegin() {
 
     ws.onmessage = function(evt) {
       jsonObject = JSON.parse(evt.data);
-      mode = jsonObject.config.mode;
-      currentTheme = jsonObject.config.currentTheme;
-      themeNum = jsonObject.config.themeNum;
-      delay = jsonObject.config.delay;
-      available = jsonObject.config.available;
+      console.log(evt.data);
 
-      startH = jsonObject.config.startH;
-      startM = jsonObject.config.startM;
-      stopH = jsonObject.config.stopH;
-      stopM = jsonObject.config.stopM;
+      if (jsonObject.hasOwnProperty("config")) {
+        mode = jsonObject.config.mode;
+        currentTheme = jsonObject.config.currentTheme;
+        themeNum = jsonObject.config.themeNum;
+        delay = jsonObject.config.delay;
 
-      console.log(
-        "mode: " +
-          mode +
-          "\r\ncurrentTheme: " +
-          currentTheme +
-          "\r\ndelay: " +
-          delay +
-          "ms" +
-          "\r\navailable: " +
-          available
-      );
-      var slider = document.getElementById("myRange");
-      var output = document.getElementById("demo");
-      slider.value = delay;
-      output.innerHTML = delay;
+        startH = jsonObject.config.startH;
+        startM = jsonObject.config.startM;
+        stopH = jsonObject.config.stopH;
+        stopM = jsonObject.config.stopM;
 
-      var i;
-      for (i = 0; i < available; i++) {
-        console.log("theme[" + i + "]: " + jsonObject.themes[i].name);
-        //$( "#btns" ).append( "<button type=\"button\" class=\"btn btn-lg btn-block " + ((themeNum==i)?"btn-success":"btn-primary") + "\" onmousedown=\'triggerMode(\"" + jsonObject.themes[i].name + "\",50)\' ontouchstart=\'triggerMode(\"jsonObject.themes[i].name\",50)\'>" + jsonObject.themes[i].name + "</button>");
-        $("#thms").append(
-          "<option value='" +
-            i +
-            "'" +
-            (themeNum == i ? ' selected="selected">' : ">") +
-            jsonObject.themes[i].name +
-            "</option>"
+        console.log(
+          "mode: " +
+            mode +
+            "\r\ncurrentTheme: " +
+            currentTheme +
+            "\r\ndelay: " +
+            delay +
+            "ms"
         );
-        //+ ((themeNum==i)?" selected>":">")
+        var slider = document.getElementById("myRange");
+        var output = document.getElementById("demo");
+        slider.value = delay;
+        output.innerHTML = delay;
+
+        var timeStartH = document.getElementById("timeStartH");
+        var timeStartM = document.getElementById("timeStartM");
+        var timeStopH = document.getElementById("timeStopH");
+        var timeStopM = document.getElementById("timeStopM");
+
+        for (i = 0; i < 24; i++) {
+          var option = document.createElement("option");
+          option.text = i;
+          option.value = i;
+          timeStartH.add(option);
+        }
+        for (i = 0; i < 60; i++) {
+          var option = document.createElement("option");
+          option.text = i;
+          option.value = i;
+          timeStartM.add(option);
+        }
+        for (i = 0; i < 24; i++) {
+          var option = document.createElement("option");
+          option.text = i;
+          option.value = i;
+          timeStopH.add(option);
+        }
+        for (i = 0; i < 60; i++) {
+          var option = document.createElement("option");
+          option.text = i;
+          option.value = i;
+          timeStopM.add(option);
+        }
+        $("#timeStartH option[value=" + startH + "]").prop("selected", true);
+        $("#timeStartM option[value=" + startM + "]").prop("selected", true);
+
+        $("#timeStopH option[value=" + stopH + "]").prop("selected", true);
+        $("#timeStopM option[value=" + stopM + "]").prop("selected", true);
       }
 
-      var timeStartH = document.getElementById("timeStartH");
-      var timeStartM = document.getElementById("timeStartM");
-      var timeStopH = document.getElementById("timeStopH");
-      var timeStopM = document.getElementById("timeStopM");
-
-      for (i = 0; i < 24; i++) {
-        var option = document.createElement("option");
-        option.text = i;
-        option.value = i;
-        timeStartH.add(option);
+      if (jsonObject.hasOwnProperty("themesConfig")) {
+        var i;
+        available = jsonObject.themesConfig.themes.length;
+        
+        console.log(
+            "\r\navailable: " +
+            available
+        );
+        
+        for (i = 0; i < available; i++) {
+          console.log(
+            "theme[" + i + "]: " + jsonObject.themesConfig.themes[i].name
+          );
+          //$( "#btns" ).append( "<button type=\"button\" class=\"btn btn-lg btn-block " + ((themeNum==i)?"btn-success":"btn-primary") + "\" onmousedown=\'triggerMode(\"" + jsonObject.themes[i].name + "\",50)\' ontouchstart=\'triggerMode(\"jsonObject.themes[i].name\",50)\'>" + jsonObject.themes[i].name + "</button>");
+          $("#thms").append(
+            "<option value='" +
+              i +
+              "'" +
+              (themeNum == i ? ' selected="selected">' : ">") +
+              jsonObject.themesConfig.themes[i].name +
+              "</option>"
+          );
+          //+ ((themeNum==i)?" selected>":">")
+        }
       }
-      for (i = 0; i < 60; i++) {
-        var option = document.createElement("option");
-        option.text = i;
-        option.value = i;
-        timeStartM.add(option);
-      }
-      for (i = 0; i < 24; i++) {
-        var option = document.createElement("option");
-        option.text = i;
-        option.value = i;
-        timeStopH.add(option);
-      }
-      for (i = 0; i < 60; i++) {
-        var option = document.createElement("option");
-        option.text = i;
-        option.value = i;
-        timeStopM.add(option);
-      }
-      $("#timeStartH option[value=" + startH + "]").prop("selected", true);
-      $("#timeStartM option[value=" + startM + "]").prop("selected", true);
-
-      $("#timeStopH option[value=" + stopH + "]").prop("selected", true);
-      $("#timeStopM option[value=" + stopM + "]").prop("selected", true);
     };
 
     ws.onclose = function() {
       // websocket is closed.
-      alert("Connection is closed...");
+      alert("WS connection is closed...");
+      //ws = new WebSocket("ws://test756:8001/");
     };
   } else {
     // The browser doesn't support WebSocket
