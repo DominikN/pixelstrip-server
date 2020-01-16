@@ -51,12 +51,12 @@ const interval = setInterval(function() {
 function WebSocketBegin() {
   if ("WebSocket" in window) {
     //Let us open a web socket
-    /*ws = new WebSocket(
+    ws = new WebSocket(
             location.hostname.match(/\.husarnetusers\.com$/)
               ? "wss://" + location.hostname + "/__port_8001/"
               : "ws://" + location.hostname + ":8001/"
-          );*/
-    ws = new WebSocket("ws://esp32big:8001/");
+          );
+    //ws = new WebSocket("ws://esp32big:8001/");
 
     ws.onopen = function() {
       // Web Socket is connected

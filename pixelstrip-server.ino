@@ -128,6 +128,20 @@ void printCurrentThemes(int line)
   Serial.println();
 }
 
+void printFS(int line)
+{
+  String settingsJson;
+  String themesDescJson;
+
+  loadSettingsJson(settingsJson);
+  loadThemesDescJson(themesDescJson);
+
+  Serial.printf("> %d: Files content:\r\n", line);
+  Serial.printf("Settings: [%s]\r\n", settingsJson.c_str());
+  Serial.printf("Themes:   [%s]\r\n", themesDescJson.c_str());
+  Serial.println();
+}
+
 
 void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
   LedStripState ledstrip;
@@ -160,7 +174,7 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             stgs_g.timeStopM = jsonDoc["validTimeSet"]["stopM"];
 
             settingsToJson(stgs_g, settingsJson);
-            saveSettings(settingsJson);
+            saveSettingsJson(settingsJson);
           }
           if (jsonDoc["getConfig"]) {
             int getConfig = jsonDoc["getConfig"];
@@ -168,8 +182,8 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
               String jsonStgs;
               String jsonThms;
 
-              loadSettings(jsonStgs);
-              loadThemesGlobal(jsonThms);
+              loadSettingsJson(jsonStgs);
+              loadThemesDescJson(jsonThms);
 
               webSocket.sendTXT(num, jsonStgs);
               webSocket.sendTXT(num, jsonThms);
@@ -199,7 +213,7 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             stgs_g.delay = delay_l;
 
             settingsToJson(stgs_g, settingsJson);
-            saveSettings(settingsJson);
+            saveSettingsJson(settingsJson);
 
             printCurrentSettings(__LINE__);
             printCurrentThemes(__LINE__);
@@ -235,25 +249,25 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             int clr = jsonDoc["clear"];
             if (clr) {
               String settingsJson;
-
-              stgs_g.mode = "auto";
-              stgs_g.current_theme = "none";
-              stgs_g.themeNum = -1;
-              stgs_g.delay = -1;
-
-              settingsToJson(stgs_g, settingsJson);
-              saveSettings(settingsJson);
+              String themesDescJson;
 
               resetThemes();
 
+              stgs_g.mode = "auto";
+              stgs_g.current_theme = "none";
+              stgs_g.themeNum = 0;
+              stgs_g.delay = -1;
+
+              settingsToJson(stgs_g, settingsJson);
+              saveSettingsJson(settingsJson);
+
+              thms_g.available = 0;
+
+              themesDescToJson(thms_g, themesDescJson);
+              saveThemesDescJson(themesDescJson);
+
               printCurrentSettings(__LINE__);
               printCurrentThemes(__LINE__);
-
-              //todo themes load
-
-              //              saveSettings(&stgs_g);
-              //              resetThemes();
-              //              loadThemesGlobal(&thms_g);
             }
           }
         } else {
@@ -282,13 +296,14 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
           if (cnt >= thms_g.framesNo[n]) {
 
             String outJson;
-            themesStgsToJson(thms_g, outJson);
-            saveThemesGlobal(outJson);  //save in memory only if binary data is saved successfully
+            themesDescToJson(thms_g, outJson);
+            saveThemesDescJson(outJson);  //save in memory only if binary data is saved successfully
 
             recording = false;
 
             printCurrentSettings(__LINE__);
             printCurrentThemes(__LINE__);
+            Serial.printf("RAM: %d", esp_get_free_heap_size());
           }
 
         }
@@ -311,12 +326,64 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
   xSemaphoreGive( sem );
 }
 
+//typedef struct {
+//  String mode;
+//  String current_theme;
+//  int themeNum;
+//  int delay;
+//  int timeStartH;
+//  int timeStartM;
+//  int timeStopH;
+//  int timeStopM;
+//} Settings_t;
+//
+//typedef struct {
+//  int available;
+//  String themeName[MAXTHEMENO];
+//  int pixelsNo[MAXTHEMENO];
+//  int framesNo[MAXTHEMENO];
+//} ThemesGlobal_t;
+
+void fs_test_loop()
+{
+  String settingsJson;
+  String themesDescJson;
+
+  FSinit();
+
+  stgs_g.mode = "mode1";
+  stgs_g.current_theme = "theme1";
+  stgs_g.themeNum = 0;
+  stgs_g.delay = 50;
+  stgs_g.timeStartH = 10;
+  stgs_g.timeStartM = 15;
+  stgs_g.timeStopH = 14;
+  stgs_g.timeStopM = 30;
+
+  thms_g.available = 1;
+  thms_g.themeName[0] = "name0";
+  thms_g.pixelsNo[0] = 100;
+  thms_g.framesNo[0] = 100;
+
+  settingsToJson(stgs_g, settingsJson);
+  themesDescToJson(thms_g, themesDescJson);
+
+  saveSettingsJson(settingsJson);
+  saveThemesDescJson(themesDescJson);
+
+  printFS(__LINE__);
+
+  while (1)
+  {
+
+  }
+}
+
 void setup() {
   Serial.begin(230400);
 
   //init and get the time
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer); //todo: move after wifi initialization
 
   Serial.printf("\r\nMAXBUFSIZE = %d\r\nMAXNUMPIXELS = %d\r\n", MAXBUFSIZE, MAXNUMPIXELS);
 
@@ -336,14 +403,23 @@ void setup() {
   String settingsJson;
   String themesDescJson;
 
-  loadSettings(settingsJson);
-  loadThemesGlobal(themesDescJson);
+  loadSettingsJson(settingsJson);
+  if (loadThemesDescJson(themesDescJson) <= 0) {
+    thms_g.available = 0;
+
+    themesDescToJson(thms_g, themesDescJson);
+    saveThemesDescJson(themesDescJson);
+  }
 
   jsonToSettings(settingsJson, stgs_g);
-  jsonToThemesStgs(themesDescJson, thms_g);
+  jsonToThemesDesc(themesDescJson, thms_g);
 
   printCurrentSettings(__LINE__);
   printCurrentThemes(__LINE__);
+
+  printFS(__LINE__);
+
+  //fs_test_loop();
 
 
   /* Turn the PID on (for "auto" mode only) */
@@ -360,18 +436,18 @@ void setup() {
   xTaskCreatePinnedToCore(
     taskWifi,          /* Task function. */
     "taskWifi",        /* String with name of task. */
-    8192,            /* Stack size in bytes. */
+    (8192 + 4096),          /* Stack size in bytes. */
     NULL,             /* Parameter passed as input of the task */
-    4,                /* Priority of the task. */
+    0,                /* Priority of the task. */
     NULL,             /* Task handle. */
     1);               /* Core where the task should run (z 0 działało) */
 
   xTaskCreatePinnedToCore(
     taskDisplay,          /* Task function. */
     "taskDisplay",        /* String with name of task. */
-    4096,            /* Stack size in bytes. */
+    8192,            /* Stack size in bytes. */
     NULL,             /* Parameter passed as input of the task */
-    4,                /* Priority of the task. */
+    0,                /* Priority of the task. */
     NULL,            /* Task handle. */
     1);               /* Core where the task should run (z 0 działało) */
 }
@@ -487,6 +563,12 @@ void taskWifi( void * parameter ) {
   webSocket.onEvent(onWebSocketEvent);
 
   server.on("/", HTTP_GET, []() {
+    Serial.printf("HTTP_GET / [size %d B] [RAM: %d]\r\n", strlen(html), esp_get_free_heap_size());
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/html", html);
+    xSemaphoreGive( sem );
+  });
+  server.on("/index.html", HTTP_GET, []() {
     Serial.printf("HTTP_GET / [size %d B] [RAM: %d]\r\n", strlen(html), esp_get_free_heap_size());
     server.sendHeader("Connection", "close");
     server.send(200, "text/html", html);
