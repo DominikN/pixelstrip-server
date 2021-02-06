@@ -45,43 +45,17 @@ bool getTime(int& h, int& m) {
 
 /* ================ CONFIG SECTION START ==================== */
 #define PIN           12   // Pin connected to PixelStrip
-
 #define WEBSOCKET_PORT 8001
 
-#if __has_include("credentials.h")
 #include "credentials.h"
-#else
-#define NUM_NETWORKS  2   // number of Wi-Fi networks
 
-// Add your networks credentials here
-const char* ssidTab[NUM_NETWORKS] = {
-"ssid-1",
-"ssid-2",
-};
-const char* passwordTab[NUM_NETWORKS] = {
-"pass-1",
-"pass-1",
-};
-
-// Husarnet credentials
-const char* hostName = "esp32strip";  //this will be the name of the 1st ESP32 device at https://app.husarnet.com
-
-/* to get your join code go to https://app.husarnet.com
--> select network
--> click "Add element"
--> select "join code" tab
-Keep it secret!
-*/
-const char* husarnetJoinCode = "xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/xxxxxxxxxxxxxxxxxxxxxx";
-#endif
 /* ================ CONFIG SECTION END   ==================== */
 
-const char* html =
-#include "html.h"
-  ;
-const char* pixelstrip_js =
-#include "pixelstrip_js.h"
-  ;
+extern const char index_html_start[] asm("_binary_src_index_html_start");
+const String html = String((const char*)index_html_start);
+
+extern const char pixelstrip_js_start[] asm("_binary_src_pixelstrip_js_start");
+const String pixelstrip_js = String((const char*)pixelstrip_js_start);
 
 
 WebServer server(8000);
@@ -290,10 +264,8 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
         }
 
         if ((recording == true)) {
-          saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n]);
-          cnt++;
           if (cnt >= thms_g.framesNo[n]) {
-
+            saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n],1);
             String outJson;
             themesDescToJson(thms_g, outJson);
             saveThemesDescJson(outJson);  //save in memory only if binary data is saved successfully
@@ -303,8 +275,10 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t lengt
             printCurrentSettings(__LINE__);
             printCurrentThemes(__LINE__);
             Serial.printf("RAM: %d", esp_get_free_heap_size());
+          } else {
+            saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n],0);
           }
-
+          cnt++;
         }
       }
       break;
@@ -401,6 +375,7 @@ void setup() {
 
   /* Load settings from NV memory */
   FSinit();
+  format_fs();
 
   String settingsJson;
   String themesDescJson;
@@ -421,7 +396,7 @@ void setup() {
 
   printFS(__LINE__);
 
-  fs_test_loop();
+  // fs_test_loop();
 
 
   /* Turn the PID on (for "auto" mode only) */
@@ -565,20 +540,20 @@ void taskWifi( void * parameter ) {
   webSocket.onEvent(onWebSocketEvent);
 
   server.on("/", HTTP_GET, []() {
-    Serial.printf("HTTP_GET / [size %d B] [RAM: %d]\r\n", strlen(html), esp_get_free_heap_size());
+    Serial.printf("HTTP_GET / [size %d B] [RAM: %d]\r\n", strlen(html.c_str()), esp_get_free_heap_size());
     server.sendHeader("Connection", "close");
     server.send(200, "text/html", html);
     xSemaphoreGive( sem );
   });
   server.on("/index.html", HTTP_GET, []() {
-    Serial.printf("HTTP_GET / [size %d B] [RAM: %d]\r\n", strlen(html), esp_get_free_heap_size());
+    Serial.printf("HTTP_GET / [size %d B] [RAM: %d]\r\n", strlen(html.c_str()), esp_get_free_heap_size());
     server.sendHeader("Connection", "close");
     server.send(200, "text/html", html);
     xSemaphoreGive( sem );
   });
 
   server.on("/pixelstrip.js", HTTP_GET, []() {
-    Serial.printf("HTTP_GET /pixelstrip.js [%d B] [RAM: %d]\r\n", strlen(pixelstrip_js), esp_get_free_heap_size());
+    Serial.printf("HTTP_GET /pixelstrip.js [%d B] [RAM: %d]\r\n", strlen(pixelstrip_js.c_str()), esp_get_free_heap_size());
     server.sendHeader("Connection", "close");
     server.send(200, "application/javascript", pixelstrip_js);
     xSemaphoreGive( sem );
