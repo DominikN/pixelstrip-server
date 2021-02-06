@@ -33,4 +33,5 @@
 
 /.pio
 /.vscode
+/src/credentials.h 
 
