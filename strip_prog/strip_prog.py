@@ -20,7 +20,7 @@ NUMPIXELS = 150
 def cmap_tab(theme):
 	cmap = plt.get_cmap(theme)
 	
-	colors_i = np.linspace(0, 1., (args.numpixel)/2)
+	colors_i = np.linspace(0, 1., (int)((args.numpixel)/2))
 	
 	# convert float to uint8
 	tab = np.uint8(255 * cmap(colors_i))

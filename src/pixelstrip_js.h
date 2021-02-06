@@ -16,6 +16,11 @@ var stopM = 59;
 var cnt = 0;
 
 function triggerMode(theme, delay) {
+  console.log(    '{"trigger":{"mode":"infinite", "theme":"' +
+      theme +
+      '", "delay":' +
+      delay +
+      "}}");
   ws.send(
     '{"trigger":{"mode":"infinite", "theme":"' +
       theme +

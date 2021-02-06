@@ -63,7 +63,7 @@ int saveSettingsJson(String& settingsJson)
 {
   int size;
   if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
-
+    Serial.printf("Opening file: %s\r\n", settingsFile);
     File file = SPIFFS.open(settingsFile, FILE_WRITE);
     if (!file) {
       Serial.printf("- %d: failed to open file for writing\r\n", __LINE__);
@@ -90,7 +90,7 @@ int loadSettingsJson(String& settingsJson)
   int size;
 
   if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
-
+    Serial.printf("Opening file: %s\r\n", settingsFile);
     File file = SPIFFS.open(settingsFile, FILE_READ);
     if (!file || file.isDirectory()) {
      Serial.printf("- %d: failed to open file for reading\r\n", __LINE__);
@@ -165,7 +165,7 @@ int saveThemesDescJson(String& themesDescJson)
 {
   int size;
   if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
-
+    Serial.printf("Opening file: %s\r\n", themesDescFile);
     File file = SPIFFS.open(themesDescFile, FILE_WRITE);
     if (!file) {
       Serial.printf("- %d: failed to open file for writing\r\n", __LINE__);
@@ -192,7 +192,7 @@ int loadThemesDescJson(String& themesDescJson)
   int size;
 
   if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
-
+    Serial.printf("Opening file: %s\r\n", themesDescFile);
     File file = SPIFFS.open(themesDescFile, FILE_READ);
     if (!file || file.isDirectory()) {
       Serial.printf("- %d: failed to open file for reading\r\n", __LINE__);

@@ -55,25 +55,24 @@ bool getTime(int& h, int& m) {
 
 // Add your networks credentials here
 const char* ssidTab[NUM_NETWORKS] = {
-  "ssid-1",
-  "ssid-2",
+"ssid-1",
+"ssid-2",
 };
 const char* passwordTab[NUM_NETWORKS] = {
-  "pass-1",
-  "pass-1",
+"pass-1",
+"pass-1",
 };
 
 // Husarnet credentials
 const char* hostName = "esp32strip";  //this will be the name of the 1st ESP32 device at https://app.husarnet.com
 
 /* to get your join code go to https://app.husarnet.com
-   -> select network
-   -> click "Add element"
-   -> select "join code" tab
-   Keep it secret!
+-> select network
+-> click "Add element"
+-> select "join code" tab
+Keep it secret!
 */
 const char* husarnetJoinCode = "xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx/xxxxxxxxxxxxxxxxxxxxxx";
-
 #endif
 /* ================ CONFIG SECTION END   ==================== */
 
@@ -368,7 +367,10 @@ void fs_test_loop()
   settingsToJson(stgs_g, settingsJson);
   themesDescToJson(thms_g, themesDescJson);
 
+  Serial.printf("\r\nsaveSettingsJson test ... \r\n");
   saveSettingsJson(settingsJson);
+
+  Serial.printf("\r\nsaveThemesDescJson test ... \r\n");
   saveThemesDescJson(themesDescJson);
 
   printFS(__LINE__);
@@ -419,7 +421,7 @@ void setup() {
 
   printFS(__LINE__);
 
-  //fs_test_loop();
+  fs_test_loop();
 
 
   /* Turn the PID on (for "auto" mode only) */
@@ -554,7 +556,7 @@ void taskWifi( void * parameter ) {
     Serial.printf("WiFi status: %d\r\n", (int)stat);
     delay(100);
   }
-  Serial.printf("WiFi connected\r\n", (int)stat);
+  Serial.printf("WiFi connected: %d\r\n", (int)stat);
 
   Husarnet.join(husarnetJoinCode, hostName);
   Husarnet.start();
