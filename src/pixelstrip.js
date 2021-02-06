@@ -58,8 +58,8 @@ function WebSocketBegin() {
     //Let us open a web socket
     ws = new WebSocket(
             location.hostname.match(/\.husarnetusers\.com$/)
-              ? "wss://" + location.hostname + "/__port_8001/"
-              : "ws://" + location.hostname + ":8001/"
+              ? "wss://" + location.hostname + "/__port_8000/ws"
+              : "ws://" + location.hostname + ":8000/ws"
           );
     //ws = new WebSocket("ws://esp32big:8001/");
 

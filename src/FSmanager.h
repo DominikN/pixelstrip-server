@@ -27,6 +27,8 @@ typedef struct {
 
 int FSinit();
 
+
+
 int saveSettingsJson(String& settingsJson);
 int loadSettingsJson(String& settingsJson);
 int jsonToSettings(String& settingsJsonIn, Settings_t& stgsOut);
@@ -37,7 +39,8 @@ int loadThemesDescJson(String& themesDescJson);
 int jsonToThemesDesc(String& themesJsonIn, ThemesGlobal_t& thmsStgs);
 int themesDescToJson(ThemesGlobal_t& thmsStgs, String& themesJsonOut );
 
-int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize);
+int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize, bool last);
 int loadThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize);
 
 int resetThemes();
+int format_fs();

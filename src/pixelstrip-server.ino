@@ -1,12 +1,9 @@
 #include <ArduinoJson.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include <Husarnet.h>
 #include <NeoPixelBus.h>
 #include <PID_v1.h>
-
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-
-#include <WebSocketsServer.h>
 #include <WiFi.h>
 #include <WiFiMulti.h>
 
@@ -55,6 +52,9 @@ bool getTime(int& h, int& m) {
 
 /* ================ CONFIG SECTION END   ==================== */
 
+#define LOG(f_, ...) \
+  { Serial.printf((f_), ##__VA_ARGS__); }
+
 extern const char index_html_start[] asm("_binary_src_index_html_start");
 const String html = String((const char*)index_html_start);
 
@@ -62,6 +62,7 @@ extern const char pixelstrip_js_start[] asm("_binary_src_pixelstrip_js_start");
 const String pixelstrip_js = String((const char*)pixelstrip_js_start);
 
 AsyncWebServer server(HTTP_PORT);
+AsyncWebSocket ws("/ws");
 
 // Define Variables we'll be connecting to
 double Setpoint, Input, Output;
@@ -77,7 +78,6 @@ ThemesGlobal_t thms_g;
 
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(MAXNUMPIXELS, PIN);
 
-WebSocketsServer webSocket = WebSocketsServer(WEBSOCKET_PORT);
 WiFiMulti wifiMulti;
 
 StaticJsonDocument<200> jsonDoc;
@@ -118,185 +118,188 @@ void printFS(int line) {
   Serial.println();
 }
 
-void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload,
-                      size_t length) {
+void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
+               AwsEventType type, void* arg, uint8_t* data, size_t len) {
+
   LedStripState ledstrip;
   static uint16_t cnt = 0;
   static int n;
 
-  switch (type) {
-    case WStype_DISCONNECTED: {
-      Serial.printf("[%u] Disconnected\r\n", num);
-    } break;
+  if (type == WS_EVT_CONNECT) {
+    LOG("ws[%s][%u] connect\n", server->url(), client->id());
+    // client->printf("Hello Client %u :)", client->id());
+    client->ping();
+  } else if (type == WS_EVT_DISCONNECT) {
+    LOG("ws[%s][%u] disconnect\n", server->url(), client->id());
+  } else if (type == WS_EVT_ERROR) {
+    LOG("ws[%s][%u] error(%u): %s\n", server->url(), client->id(),
+        *((uint16_t*)arg), (char*)data);
+  } else if (type == WS_EVT_PONG) {
+    LOG("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len,
+        (len) ? (char*)data : "");
+  } else if (type == WS_EVT_DATA) {
+    AwsFrameInfo* info = (AwsFrameInfo*)arg;
+    String payload = "";
+    if (info->final && info->index == 0 && info->len == len) {
+      // the whole message is in a single frame and we got all of it's data
+      LOG("ws[%s][%u] %s-msg[%llu]\r\n", server->url(), client->id(),
+          (info->opcode == WS_TEXT) ? "txt" : "bin", info->len);
 
-    case WStype_CONNECTED: {
-      Serial.printf("[%u] Connected\r\n", num);
-    } break;
-
-    case WStype_TEXT: {
-      Serial.printf("[%s]\r\n", (char*)payload);
-
-      jsonDoc.clear();
-      auto error = deserializeJson(jsonDoc, payload);
-
-      if (!error) {
-        if (jsonDoc["validTimeSet"]) {
-          String settingsJson;
-          stgs_g.timeStartH = jsonDoc["validTimeSet"]["startH"];
-          stgs_g.timeStartM = jsonDoc["validTimeSet"]["startM"];
-          stgs_g.timeStopH = jsonDoc["validTimeSet"]["stopH"];
-          stgs_g.timeStopM = jsonDoc["validTimeSet"]["stopM"];
-
-          settingsToJson(stgs_g, settingsJson);
-          saveSettingsJson(settingsJson);
+      if (info->opcode == WS_BINARY) {
+        for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
+          ledstrip.pixel[3 * i + 0] = (uint8_t)(*(data + (i * 3 + 0)));
+          ledstrip.pixel[3 * i + 1] = (uint8_t)(*(data + (i * 3 + 1)));
+          ledstrip.pixel[3 * i + 2] = (uint8_t)(*(data + (i * 3 + 2)));
         }
-        if (jsonDoc["getConfig"]) {
-          int getConfig = jsonDoc["getConfig"];
-          if (getConfig) {
-            String jsonStgs;
-            String jsonThms;
 
-            loadSettingsJson(jsonStgs);
-            loadThemesDescJson(jsonThms);
-
-            webSocket.sendTXT(num, jsonStgs);
-            webSocket.sendTXT(num, jsonThms);
-          }
+        if ((stgs_g.mode == "auto") && (recording == false)) {
+          xQueueSendToBack(queue, (void*)&ledstrip, 0);
+          // Serial.printf("RAM: %d", esp_get_free_heap_size());
         }
-        if (jsonDoc["trigger"]) {
-          String settingsJson;
 
-          String mode_l = jsonDoc["trigger"]["mode"];
-          String theme_l = jsonDoc["trigger"]["theme"];
-          int delay_l = jsonDoc["trigger"]["delay"];
+        if ((recording == true)) {
+          if (cnt >= thms_g.framesNo[n]) {
+            saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n], 1);
+            String outJson;
+            themesDescToJson(thms_g, outJson);
+            saveThemesDescJson(outJson);  // save in memory only if binary data
+                                          // is saved successfully
 
-          stgs_g.mode = mode_l;
-          stgs_g.current_theme = theme_l;
+            recording = false;
 
-          int n = -1;
-
-          Serial.printf("find theme number:\r\n");
-          for (int i = 0; i < thms_g.available; i++) {
-            Serial.printf("%s , %s\r\n", thms_g.themeName[i].c_str(),
-                          theme_l.c_str());
-            if (thms_g.themeName[i] == theme_l) {
-              n = i;
-            }
+            printCurrentSettings(__LINE__);
+            printCurrentThemes(__LINE__);
+            Serial.printf("RAM: %d", esp_get_free_heap_size());
+          } else {
+            saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n], 0);
           }
-          stgs_g.themeNum = n;
-
-          stgs_g.delay = delay_l;
-
-          settingsToJson(stgs_g, settingsJson);
-          saveSettingsJson(settingsJson);
-
-          printCurrentSettings(__LINE__);
-          printCurrentThemes(__LINE__);
-
-          cnt = 0;
+          cnt++;
         }
-        if (jsonDoc["save"]) {
-          String theme_l = jsonDoc["save"]["theme"];
-          int numpixels_l = jsonDoc["save"]["numpixels"];
-          int numframes_l = jsonDoc["save"]["numframes"];
+      }
 
-          // n = getThemeNo(theme_l);
-          n = -1;
-          for (int i = 0; i < thms_g.available; i++) {
-            if (thms_g.themeName[i] == theme_l) {
-              n = i;
-            }
-          }
-
-          if (n < 0) {  // received a new them, saving in memory
-            n = thms_g.available;
-            thms_g.available = thms_g.available + 1;
-          }
-
-          thms_g.themeName[n] = theme_l;
-          thms_g.pixelsNo[n] = numpixels_l;
-          thms_g.framesNo[n] = numframes_l;
-
-          recording = true;
-          cnt = 0;
+      if (info->opcode == WS_TEXT) {
+        for (size_t i = 0; i < info->len; i++) {
+          payload += (char)data[i];
         }
-        if (jsonDoc["clear"]) {
-          int clr = jsonDoc["clear"];
-          if (clr) {
+
+        LOG("%s\r\n\r\n", payload.c_str());
+
+        jsonDoc.clear();
+        auto error = deserializeJson(jsonDoc, payload);
+
+        if (!error) {
+          if (jsonDoc["validTimeSet"]) {
             String settingsJson;
-            String themesDescJson;
+            stgs_g.timeStartH = jsonDoc["validTimeSet"]["startH"];
+            stgs_g.timeStartM = jsonDoc["validTimeSet"]["startM"];
+            stgs_g.timeStopH = jsonDoc["validTimeSet"]["stopH"];
+            stgs_g.timeStopM = jsonDoc["validTimeSet"]["stopM"];
 
-            resetThemes();
+            settingsToJson(stgs_g, settingsJson);
+            saveSettingsJson(settingsJson);
+          }
+          if (jsonDoc["getConfig"]) {
+            int getConfig = jsonDoc["getConfig"];
+            if (getConfig) {
+              String jsonStgs;
+              String jsonThms;
 
-            stgs_g.mode = "auto";
-            stgs_g.current_theme = "none";
-            stgs_g.themeNum = 0;
-            stgs_g.delay = -1;
+              loadSettingsJson(jsonStgs);
+              loadThemesDescJson(jsonThms);
+
+              ws.text(client->id(),jsonStgs);
+              ws.text(client->id(),jsonThms);
+
+            }
+          }
+          if (jsonDoc["trigger"]) {
+            String settingsJson;
+
+            String mode_l = jsonDoc["trigger"]["mode"];
+            String theme_l = jsonDoc["trigger"]["theme"];
+            int delay_l = jsonDoc["trigger"]["delay"];
+
+            stgs_g.mode = mode_l;
+            stgs_g.current_theme = theme_l;
+
+            int n = -1;
+
+            Serial.printf("find theme number:\r\n");
+            for (int i = 0; i < thms_g.available; i++) {
+              Serial.printf("%s , %s\r\n", thms_g.themeName[i].c_str(),
+                            theme_l.c_str());
+              if (thms_g.themeName[i] == theme_l) {
+                n = i;
+              }
+            }
+            stgs_g.themeNum = n;
+
+            stgs_g.delay = delay_l;
 
             settingsToJson(stgs_g, settingsJson);
             saveSettingsJson(settingsJson);
 
-            thms_g.available = 0;
-
-            themesDescToJson(thms_g, themesDescJson);
-            saveThemesDescJson(themesDescJson);
-
             printCurrentSettings(__LINE__);
             printCurrentThemes(__LINE__);
+
+            cnt = 0;
           }
-        }
-      } else {
-        Serial.printf("JSON parse error\r\n");
-      }
-    } break;
+          if (jsonDoc["save"]) {
+            String theme_l = jsonDoc["save"]["theme"];
+            int numpixels_l = jsonDoc["save"]["numpixels"];
+            int numframes_l = jsonDoc["save"]["numframes"];
 
-    case WStype_BIN: {
-      // int n = thms_g.available - 1; //index of frame being saved in NVM
+            // n = getThemeNo(theme_l);
+            n = -1;
+            for (int i = 0; i < thms_g.available; i++) {
+              if (thms_g.themeName[i] == theme_l) {
+                n = i;
+              }
+            }
 
-      for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
-        ledstrip.pixel[3 * i + 0] = (uint8_t)(*(payload + (i * 3 + 0)));
-        ledstrip.pixel[3 * i + 1] = (uint8_t)(*(payload + (i * 3 + 1)));
-        ledstrip.pixel[3 * i + 2] = (uint8_t)(*(payload + (i * 3 + 2)));
-      }
+            if (n < 0) {  // received a new them, saving in memory
+              n = thms_g.available;
+              thms_g.available = thms_g.available + 1;
+            }
 
-      if ((stgs_g.mode == "auto") && (recording == false)) {
-        xQueueSendToBack(queue, (void*)&ledstrip, 0);
-        // Serial.printf("RAM: %d", esp_get_free_heap_size());
-      }
+            thms_g.themeName[n] = theme_l;
+            thms_g.pixelsNo[n] = numpixels_l;
+            thms_g.framesNo[n] = numframes_l;
 
-      if ((recording == true)) {
-        if (cnt >= thms_g.framesNo[n]) {
-          saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n], 1);
-          String outJson;
-          themesDescToJson(thms_g, outJson);
-          saveThemesDescJson(outJson);  // save in memory only if binary data is
-                                        // saved successfully
+            recording = true;
+            cnt = 0;
+          }
+          if (jsonDoc["clear"]) {
+            int clr = jsonDoc["clear"];
+            if (clr) {
+              String settingsJson;
+              String themesDescJson;
 
-          recording = false;
+              resetThemes();
 
-          printCurrentSettings(__LINE__);
-          printCurrentThemes(__LINE__);
-          Serial.printf("RAM: %d", esp_get_free_heap_size());
+              stgs_g.mode = "auto";
+              stgs_g.current_theme = "none";
+              stgs_g.themeNum = 0;
+              stgs_g.delay = -1;
+
+              settingsToJson(stgs_g, settingsJson);
+              saveSettingsJson(settingsJson);
+
+              thms_g.available = 0;
+
+              themesDescToJson(thms_g, themesDescJson);
+              saveThemesDescJson(themesDescJson);
+
+              printCurrentSettings(__LINE__);
+              printCurrentThemes(__LINE__);
+            }
+          }
         } else {
-          saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n], 0);
+          Serial.printf("JSON parse error\r\n");
         }
-        cnt++;
       }
-    } break;
-    case WStype_ERROR: {
-      Serial.printf("[%u] Error\r\n", num);
-    } break;
-
-    case WStype_FRAGMENT_TEXT_START:
-    case WStype_FRAGMENT_BIN_START:
-    case WStype_FRAGMENT:
-    case WStype_FRAGMENT_FIN:
-      break;
-
-    default:
-      break;
+    }
   }
-  xSemaphoreGive(sem);
 }
 
 // typedef struct {
@@ -533,9 +536,6 @@ void taskWifi(void* parameter) {
   Husarnet.join(husarnetJoinCode, hostName);
   Husarnet.start();
 
-  webSocket.begin();
-  webSocket.onEvent(onWebSocketEvent);
-
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send(200, "text/html", html);
   });
@@ -547,12 +547,13 @@ void taskWifi(void* parameter) {
     request->send(200, "application/javascript", pixelstrip_js);
   });
 
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+
   server.begin();
 
   while (1) {
     while (WiFi.status() == WL_CONNECTED) {
-      webSocket.loop();
-
       timeValid = getTime(h, m);
       tNow = 60 * h + m;
       xSemaphoreTake(sem, (TickType_t)10);

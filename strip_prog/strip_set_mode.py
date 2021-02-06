@@ -8,7 +8,7 @@ import argparse
 import json
 
 async def mainfunc():
-	uri = "ws://" + args.hostname + ":8001"
+	uri = "ws://" + args.hostname + ":8000/ws"
 	print("connecting: " + uri)
 	async with websockets.connect(uri) as websocket:
 		msg = json.dumps({"trigger":{"mode":args.mode, "theme":args.theme, "delay":args.delay}})

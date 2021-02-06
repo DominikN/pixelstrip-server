@@ -1,16 +1,17 @@
-#include <WiFi.h>
-#include "FSmanager.h"
 #include <ArduinoJson.h>
+#include <WiFi.h>
 
 #include "FS.h"
 #include "SPIFFS.h"
+
+#include "FSmanager.h"
 
 SemaphoreHandle_t semFS = NULL;
 
 char* settingsFile = "/generalStgs.json";
 char* themesDescFile = "/themeStgs2.json";
 
-void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
+void listDir(fs::FS& fs, const char* dirname, uint8_t levels) {
   Serial.printf("Listing directory: %s\r\n", dirname);
 
   File root = fs.open(dirname);
@@ -41,8 +42,7 @@ void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
   }
 }
 
-int FSinit()
-{
+int FSinit() {
   semFS = xSemaphoreCreateMutex();
   xSemaphoreGive(semFS);
 
@@ -51,29 +51,29 @@ int FSinit()
     return -1;
   }
 
-  //SPIFFS.remove(settingsFile);
-  //SPIFFS.remove(themesDescFile);
-  //SPIFFS.mkdir("/themes");
+  // SPIFFS.remove(settingsFile);
+  // SPIFFS.remove(themesDescFile);
+  // SPIFFS.mkdir("/themes");
   listDir(SPIFFS, "/", 0);
 
   return 1;
 }
 
-int saveSettingsJson(String& settingsJson)
-{
+int saveSettingsJson(String& settingsJson) {
   int size;
-  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
+  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
     Serial.printf("Opening file: %s\r\n", settingsFile);
     File file = SPIFFS.open(settingsFile, FILE_WRITE);
     if (!file) {
       Serial.printf("- %d: failed to open file for writing\r\n", __LINE__);
       size = -1;
     } else {
-      //file.flush();
+      // file.flush();
       size = file.print(settingsJson);
       file.close();
 
-      Serial.printf("Save settings: [%s][%d Bytes]\r\n", settingsJson.c_str(), size);
+      Serial.printf("Save settings: [%s][%d Bytes]\r\n", settingsJson.c_str(),
+                    size);
     }
     xSemaphoreGive(semFS);
   } else {
@@ -84,28 +84,31 @@ int saveSettingsJson(String& settingsJson)
   return size;
 }
 
-int loadSettingsJson(String& settingsJson)
-{
+int loadSettingsJson(String& settingsJson) {
   uint8_t buf[512];
   int size;
 
-  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
+  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
     Serial.printf("Opening file: %s\r\n", settingsFile);
     File file = SPIFFS.open(settingsFile, FILE_READ);
     if (!file || file.isDirectory()) {
-     Serial.printf("- %d: failed to open file for reading\r\n", __LINE__);
+      Serial.printf("- %d: failed to open file for reading\r\n", __LINE__);
       size = -1;
     } else {
       size = file.read(buf, file.available());
       file.close();
 
       if (size < 0) {
-        settingsJson = String("{\"config\":{\"mode\":\"auto\", \"currentTheme\":\"none\", \"themeNum\":0, \"delay\":50, \"startH\":0, \"startM\":0, \"stopH\":23, \"stopM\":59}}");
+        settingsJson = String(
+            "{\"config\":{\"mode\":\"auto\", \"currentTheme\":\"none\", "
+            "\"themeNum\":0, \"delay\":50, \"startH\":0, \"startM\":0, "
+            "\"stopH\":23, \"stopM\":59}}");
       } else {
-        buf[size] = 0; //make a C-string
+        buf[size] = 0;  // make a C-string
         settingsJson = String((char*)buf);
       }
-      Serial.printf("Load settings: %d bytes [%s]\r\n", size,  settingsJson.c_str());
+      Serial.printf("Load settings: %d bytes [%s]\r\n", size,
+                    settingsJson.c_str());
     }
 
     xSemaphoreGive(semFS);
@@ -117,8 +120,7 @@ int loadSettingsJson(String& settingsJson)
   return size;
 }
 
-int jsonToSettings(String& settingsJsonIn, Settings_t& stgsOut)
-{
+int jsonToSettings(String& settingsJsonIn, Settings_t& stgsOut) {
   StaticJsonDocument<512> jsonDoc;
 
   jsonDoc.clear();
@@ -130,7 +132,7 @@ int jsonToSettings(String& settingsJsonIn, Settings_t& stgsOut)
 
     stgsOut.mode = mode_l;
     stgsOut.current_theme = ctheme_l;
-    stgsOut.themeNum = jsonDoc["config"]["themeNum"];    //todo: redundant
+    stgsOut.themeNum = jsonDoc["config"]["themeNum"];  // todo: redundant
     stgsOut.delay = jsonDoc["config"]["delay"];
 
     stgsOut.timeStartH = jsonDoc["config"]["startH"];
@@ -142,15 +144,14 @@ int jsonToSettings(String& settingsJsonIn, Settings_t& stgsOut)
   }
 }
 
-int settingsToJson(Settings_t& stgsIn, String& settingsJsonOut )
-{
+int settingsToJson(Settings_t& stgsIn, String& settingsJsonOut) {
   StaticJsonDocument<512> jsonDoc;
   jsonDoc.clear();
 
-  JsonObject configObj  = jsonDoc.createNestedObject("config");
+  JsonObject configObj = jsonDoc.createNestedObject("config");
   configObj["mode"] = stgsIn.mode;
   configObj["currentTheme"] = stgsIn.current_theme;
-  configObj["themeNum"] = stgsIn.themeNum;    //todo: redundant
+  configObj["themeNum"] = stgsIn.themeNum;  // todo: redundant
   configObj["delay"] = stgsIn.delay;
 
   configObj["startH"] = stgsIn.timeStartH;
@@ -161,20 +162,20 @@ int settingsToJson(Settings_t& stgsIn, String& settingsJsonOut )
   return serializeJson(jsonDoc, settingsJsonOut);
 }
 
-int saveThemesDescJson(String& themesDescJson)
-{
+int saveThemesDescJson(String& themesDescJson) {
   int size;
-  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
+  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
     Serial.printf("Opening file: %s\r\n", themesDescFile);
     File file = SPIFFS.open(themesDescFile, FILE_WRITE);
     if (!file) {
       Serial.printf("- %d: failed to open file for writing\r\n", __LINE__);
       size = -1;
     } else {
-      //file.flush();
+      // file.flush();
       size = file.print(themesDescJson);
       file.close();
-      Serial.printf("Save themes desc: [%s][%d Bytes]\r\n", themesDescJson.c_str(), size);
+      Serial.printf("Save themes desc: [%s][%d Bytes]\r\n",
+                    themesDescJson.c_str(), size);
     }
 
     xSemaphoreGive(semFS);
@@ -186,12 +187,11 @@ int saveThemesDescJson(String& themesDescJson)
   return size;
 }
 
-int loadThemesDescJson(String& themesDescJson)
-{
+int loadThemesDescJson(String& themesDescJson) {
   uint8_t buf[512];
   int size;
 
-  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
+  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
     Serial.printf("Opening file: %s\r\n", themesDescFile);
     File file = SPIFFS.open(themesDescFile, FILE_READ);
     if (!file || file.isDirectory()) {
@@ -204,11 +204,12 @@ int loadThemesDescJson(String& themesDescJson)
       if (size < 0) {
         themesDescJson = String("");
       } else {
-        buf[size] = 0; //make a C-string
+        buf[size] = 0;  // make a C-string
         themesDescJson = String((char*)buf);
       }
 
-      Serial.printf("Load theme stgs: %d bytes [%s]\r\n", size, themesDescJson.c_str());
+      Serial.printf("Load theme stgs: %d bytes [%s]\r\n", size,
+                    themesDescJson.c_str());
     }
     xSemaphoreGive(semFS);
   } else {
@@ -219,9 +220,8 @@ int loadThemesDescJson(String& themesDescJson)
   return size;
 }
 
-int jsonToThemesDesc(String& themesJsonIn, ThemesGlobal_t& thmsStgs)
-{
-  StaticJsonDocument<2048> jsonDoc; //about 100 bytes for one theme is needed
+int jsonToThemesDesc(String& themesJsonIn, ThemesGlobal_t& thmsStgs) {
+  StaticJsonDocument<2048> jsonDoc;  // about 100 bytes for one theme is needed
 
   jsonDoc.clear();
   auto error = deserializeJson(jsonDoc, themesJsonIn);
@@ -230,7 +230,7 @@ int jsonToThemesDesc(String& themesJsonIn, ThemesGlobal_t& thmsStgs)
     thmsStgs.available = jsonDoc["themesConfig"]["themes"].size();
 
     Serial.printf("jsonToThemesStgs: available = %d\r\n", thmsStgs.available);
-    
+
     for (int i = 0; i < thmsStgs.available; i++) {
       String name_l = jsonDoc["themesConfig"]["themes"][i]["name"];
 
@@ -249,14 +249,13 @@ int jsonToThemesDesc(String& themesJsonIn, ThemesGlobal_t& thmsStgs)
   }
 }
 
-int themesDescToJson(ThemesGlobal_t& thmsStgs, String& themesJsonOut )
-{
+int themesDescToJson(ThemesGlobal_t& thmsStgs, String& themesJsonOut) {
   StaticJsonDocument<2048> jsonDoc;
   jsonDoc.clear();
 
-  JsonObject configObj  = jsonDoc.createNestedObject("themesConfig");
+  JsonObject configObj = jsonDoc.createNestedObject("themesConfig");
 
-  //configObj["available"] = thmsStgs.available;
+  // configObj["available"] = thmsStgs.available;
 
   JsonArray themesObj = configObj.createNestedArray("themes");
   JsonObject theme[MAXTHEMENO];
@@ -271,24 +270,24 @@ int themesDescToJson(ThemesGlobal_t& thmsStgs, String& themesJsonOut )
   return serializeJson(jsonDoc, themesJsonOut);
 }
 
-int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize)
-{
+// TODO: save the whole frame at once. Ten append chyba coś psuje, bo każdy kolejny write dłużej trwa chyba
+int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize, bool last) {
   int size;
-  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
+  static File file;
+  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
     String fileName = "/themes/theme_" + String(themeNo) + ".txt";
-    File file = SPIFFS.open(fileName.c_str(), FILE_APPEND);
-    if (!file) {
-      Serial.printf("- %d: failed to open file for append\r\n", __LINE__);
-      size =  -1;
-    } else {
-      if (frameNo == 0) {
-        file.flush();
-      }
-      size = file.write((uint8_t*)ls, frameSize);
-      file.close();
-
-      Serial.printf("%s : Save theme: [%d][%d], RAM: %d\r\n", fileName.c_str(), themeNo, frameNo, esp_get_free_heap_size());
+    if (frameNo == 0) {
+      file = SPIFFS.open(fileName.c_str(), FILE_APPEND);
+      file.flush();
     }
+    size = file.write((uint8_t*)ls, frameSize);
+
+    if (last == true) {
+      file.close();
+    }
+
+    Serial.printf("%s : Save theme: [%d][%d], RAM: %d\r\n", fileName.c_str(),
+                  themeNo, frameNo, esp_get_free_heap_size());
     xSemaphoreGive(semFS);
   } else {
     Serial.printf("Sem error WS\r\n");
@@ -298,24 +297,24 @@ int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize)
   return size;
 }
 
-int loadThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize)
-{
+int loadThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize) {
   int size;
-  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
+  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
     String fileName = "/themes/theme_" + String(themeNo) + ".txt";
     File file = SPIFFS.open(fileName.c_str(), FILE_READ);
-    
+
     if (!file || file.isDirectory()) {
       Serial.printf("- %d: failed to open file for readng\r\n", __LINE__);
-      size =  -1;
+      size = -1;
     } else {
       file.seek(frameNo * frameSize);
       size = file.read((uint8_t*)ls, frameSize);
       file.close();
 
-      Serial.printf("%s : Load theme: [%d][%d], RAM: %d\r\n", fileName.c_str(), themeNo, frameNo, esp_get_free_heap_size());
+      Serial.printf("%s : Load theme: [%d][%d], RAM: %d\r\n", fileName.c_str(),
+                    themeNo, frameNo, esp_get_free_heap_size());
     }
-    
+
     xSemaphoreGive(semFS);
   } else {
     Serial.printf("Sem error WS\r\n");
@@ -325,13 +324,11 @@ int loadThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize)
   return size;
 }
 
-
-int resetThemes()
-{
+int resetThemes() {
   String defaultTheme = "{\"themesConfig\":{\"themes\":[]}}";
   saveThemesDescJson(defaultTheme);
-  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
-    //SPIFFS.remove(themesDescFile); //todo do not remove but only change
+  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
+    // SPIFFS.remove(themesDescFile); //todo do not remove but only change
     SPIFFS.rmdir("/themes");
     SPIFFS.mkdir("/themes");
 
@@ -343,4 +340,8 @@ int resetThemes()
   }
 
   return 1;
+}
+
+int format_fs() {
+  SPIFFS.format();
 }
