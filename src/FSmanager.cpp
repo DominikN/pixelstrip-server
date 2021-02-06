@@ -270,24 +270,24 @@ int themesDescToJson(ThemesGlobal_t& thmsStgs, String& themesJsonOut) {
   return serializeJson(jsonDoc, themesJsonOut);
 }
 
-// TODO: save the whole frame at once. Ten append chyba coś psuje, bo każdy kolejny write dłużej trwa chyba
-int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize, bool last) {
+int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize)
+{
   int size;
-  static File file;
-  if (xSemaphoreTake(semFS, (TickType_t)1000)) {
+  if (xSemaphoreTake(semFS, ( TickType_t)1000)) {
     String fileName = "/themes/theme_" + String(themeNo) + ".txt";
-    if (frameNo == 0) {
-      file = SPIFFS.open(fileName.c_str(), FILE_APPEND);
-      file.flush();
-    }
-    size = file.write((uint8_t*)ls, frameSize);
-
-    if (last == true) {
+    File file = SPIFFS.open(fileName.c_str(), FILE_APPEND);
+    if (!file) {
+      Serial.printf("- %d: failed to open file for append\r\n", __LINE__);
+      size =  -1;
+    } else {
+      if (frameNo == 0) {
+        file.flush();
+      }
+      size = file.write((uint8_t*)ls, frameSize);
       file.close();
-    }
 
-    Serial.printf("%s : Save theme: [%d][%d], RAM: %d\r\n", fileName.c_str(),
-                  themeNo, frameNo, esp_get_free_heap_size());
+      Serial.printf("%s : Save theme: [%d][%d], RAM: %d\r\n", fileName.c_str(), themeNo, frameNo, esp_get_free_heap_size());
+    }
     xSemaphoreGive(semFS);
   } else {
     Serial.printf("Sem error WS\r\n");
@@ -296,6 +296,33 @@ int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize, b
 
   return size;
 }
+
+// // TODO: save the whole frame at once. Ten append chyba coś psuje, bo każdy kolejny write dłużej trwa chyba
+// int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize, bool last) {
+//   int size;
+//   static File file;
+//   if (xSemaphoreTake(semFS, (TickType_t)1000)) {
+//     String fileName = "/themes/theme_" + String(themeNo) + ".txt";
+//     if (frameNo == 0) {
+//       file = SPIFFS.open(fileName.c_str(), FILE_APPEND);
+//       file.flush();
+//     }
+//     size = file.write((uint8_t*)ls, frameSize);
+
+//     if (last == true) {
+//       file.close();
+//     }
+
+//     Serial.printf("%s : Save theme: [%d][%d], RAM: %d\r\n", fileName.c_str(),
+//                   themeNo, frameNo, esp_get_free_heap_size());
+//     xSemaphoreGive(semFS);
+//   } else {
+//     Serial.printf("Sem error WS\r\n");
+//     size = -1;
+//   }
+
+//   return size;
+// }
 
 int loadThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize) {
   int size;

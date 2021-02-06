@@ -39,7 +39,8 @@ int loadThemesDescJson(String& themesDescJson);
 int jsonToThemesDesc(String& themesJsonIn, ThemesGlobal_t& thmsStgs);
 int themesDescToJson(ThemesGlobal_t& thmsStgs, String& themesJsonOut );
 
-int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize, bool last);
+// int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize, bool last);
+int saveThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize);
 int loadThemeFrame(LedStripState* ls, int themeNo, int frameNo, int frameSize);
 
 int resetThemes();

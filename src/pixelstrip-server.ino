@@ -71,7 +71,6 @@ double Setpoint, Input, Output;
 PID myPID(&Input, &Output, &Setpoint, 2.0, 0.5, 0.0, DIRECT);
 
 QueueHandle_t queue;
-SemaphoreHandle_t sem = NULL;
 
 Settings_t stgs_g = {"auto", "none", -1, -1, 0, 0, 23, 59};
 ThemesGlobal_t thms_g;
@@ -120,7 +119,6 @@ void printFS(int line) {
 
 void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
                AwsEventType type, void* arg, uint8_t* data, size_t len) {
-
   LedStripState ledstrip;
   static uint16_t cnt = 0;
   static int n;
@@ -158,22 +156,19 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
         }
 
         if ((recording == true)) {
+          saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n]);
+          cnt++;
           if (cnt >= thms_g.framesNo[n]) {
-            saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n], 1);
             String outJson;
             themesDescToJson(thms_g, outJson);
             saveThemesDescJson(outJson);  // save in memory only if binary data
                                           // is saved successfully
-
             recording = false;
 
             printCurrentSettings(__LINE__);
             printCurrentThemes(__LINE__);
             Serial.printf("RAM: %d", esp_get_free_heap_size());
-          } else {
-            saveThemeFrame(&ledstrip, n, cnt, thms_g.pixelsNo[n], 0);
           }
-          cnt++;
         }
       }
 
@@ -207,9 +202,10 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
               loadSettingsJson(jsonStgs);
               loadThemesDescJson(jsonThms);
 
-              ws.text(client->id(),jsonStgs);
-              ws.text(client->id(),jsonThms);
-
+              // ws.text(client->id(), jsonStgs);
+              // ws.text(client->id(), jsonThms);
+              ws.textAll(jsonStgs);
+              ws.textAll(jsonThms);
             }
           }
           if (jsonDoc["trigger"]) {
@@ -374,11 +370,9 @@ void setup() {
   }
   xQueueReset(queue);
 
-  sem = xSemaphoreCreateMutex();
-
   /* Load settings from NV memory */
   FSinit();
-  format_fs();
+  // format_fs();
 
   String settingsJson;
   String themesDescJson;
@@ -556,8 +550,7 @@ void taskWifi(void* parameter) {
     while (WiFi.status() == WL_CONNECTED) {
       timeValid = getTime(h, m);
       tNow = 60 * h + m;
-      xSemaphoreTake(sem, (TickType_t)10);
-      // delay(2);
+      delay(10);
     }
     Serial.printf("WiFi disconnected, reconnecting\r\n");
     stat = wifiMulti.run();
