@@ -64,7 +64,7 @@ async def mainfunc():
 		
 			for x in range(args.numpixel):	
 				await websocket.send(a.tobytes())
-				await asyncio.sleep(0.1)
+				await asyncio.sleep(0.2)
 			
 				a = np.roll(a,3)
 			

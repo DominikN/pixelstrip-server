@@ -143,6 +143,7 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
       LOG("ws[%s][%u] %s-msg[%llu]\r\n", server->url(), client->id(),
           (info->opcode == WS_TEXT) ? "txt" : "bin", info->len);
 
+      //TODO: instead of saving frame in the file in this handler, save the frame in the queue, and other task will take care of storing it in the file
       if (info->opcode == WS_BINARY) {
         for (int i = 0; i < thms_g.pixelsNo[n]; i++) {
           ledstrip.pixel[3 * i + 0] = (uint8_t)(*(data + (i * 3 + 0)));
@@ -271,7 +272,10 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
               String settingsJson;
               String themesDescJson;
 
-              resetThemes();
+              // resetThemes();
+              LOG("[%d] Format FS start\r\n", 0);
+              format_fs();
+              LOG("[%d] Format FS end\r\n", 0);
 
               stgs_g.mode = "auto";
               stgs_g.current_theme = "none";

@@ -18,7 +18,9 @@ async def mainfunc():
 		msg = json.dumps({"clear": 1})
 		print(msg)
 		await websocket.send(msg)
-		await asyncio.sleep(0.5)
+  
+		# wait until FS format end
+		await asyncio.sleep(15.0) 
 
 		theme = np.zeros((3*args.numpixel,), dtype=int)
 		print(theme)
